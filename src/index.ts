@@ -23,8 +23,10 @@ import { logToFile } from "@/lib/logger";
 import { botConfig } from "@/lib/config";
 import { loadCommands, getCommand } from "@/lib/commandLoader";
 import { getGroupMetadata, invalidateGroupMetadata } from "@/lib/groupCache";
-import { getGroupSettings } from "@/lib/db";
+import { getGroupSettings, getUsers } from "@/lib/db";
 import { handleParticipantsUpdate } from "@/lib/greeting";
+import { isBot, syncGroupUsers } from "@/lib/userSync";
+import { mentionPhones } from "@/lib/mentions";
 import type { Command } from "@/lib/types";
 
 const PAIRING_CODE_DELAY_MS = 3000;
@@ -101,9 +103,11 @@ function createReply(sock: WASocket, msg: ParsedMessage) {
     content: string | AnyMessageContent,
     options?: MiscMessageGenerationOptions,
   ) => {
+    // Phone numbers in a text reply become real @tags; the sender is not
+    // tagged automatically, only numbers the reply actually names.
     const res = await sock.sendMessage(
       msg.chatJid,
-      typeof content === "string" ? { text: content } : content,
+      typeof content === "string" ? mentionPhones(content) : content,
       { quoted: msg.raw, ...options },
     );
     logToFile("SENT_REPLY", res);
@@ -171,9 +175,20 @@ async function handleMessage(sock: WASocket, raw: WAMessage): Promise<void> {
 
   const reply = createReply(sock, msg);
 
-  if (!msg.isCmd) return;
+  const cmd = msg.isCmd ? getCommand(msg.command) : undefined;
+  try {
+    const store = getUsers();
+    store.touch(
+      { jid: msg.senderJid, lid: msg.senderLid, name: msg.pushName },
+      Boolean(cmd),
+    );
+    // The owner is premium by definition, so no `.premium` run is needed.
+    if (msg.isOwner) store.ensurePremium(msg.senderJid, msg.senderJid);
+  } catch (err) {
+    // Activity counts must never stop the command that was about to run.
+    console.error("Failed to record user activity:", err);
+  }
 
-  const cmd = getCommand(msg.command);
   if (!cmd) return;
 
   const denial = denyReason(cmd, msg);
@@ -279,10 +294,30 @@ async function connect(): Promise<void> {
     }
   });
 
+  // A freshly created group (or one the bot was added to with full metadata)
+  // seeds every member once, before anyone has sent a message.
+  sock.ev.on("groups.upsert", (groups) => {
+    for (const { id } of groups) {
+      void syncGroupUsers(sock, id, getUsers()).catch((err) =>
+        console.error(`Failed to sync members of ${id}:`, err),
+      );
+    }
+  });
+
   // The cached participant list must never outlive a real membership change.
   const forget = ({ id }: { id: string }) => invalidateGroupMetadata(id);
   sock.ev.on("group-participants.update", (update) => {
     forget(update);
+    // Joining an existing group arrives as an "add" of the bot itself. The
+    // event only names the newcomers, so fetch the metadata and seed everyone.
+    if (
+      update.action === "add" &&
+      update.participants.some((p) => isBot(sock, p.id, p.lid, p.phoneNumber))
+    ) {
+      void syncGroupUsers(sock, update.id, getUsers()).catch((err) =>
+        console.error(`Failed to sync members of ${update.id}:`, err),
+      );
+    }
     // Runs after the invalidation so the greeting reads fresh metadata.
     void handleParticipantsUpdate(sock, getGroupSettings(), update).catch(
       (err) => console.error("Greeting handler failed:", err),

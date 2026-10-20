@@ -42,6 +42,10 @@ const PHONE_JID_SUFFIXES = ["@s.whatsapp.net", "@hosted"];
 export const userPart = (jid: string): string => jid.split("@")[0] || jid;
 const digits = (value: string): string => value.replace(/\D/g, "");
 
+/** A dialable phone identity (PN), as opposed to a LID or a group. */
+export const isPhoneJid = (jid: string): boolean =>
+  PHONE_JID_SUFFIXES.some((suffix) => jid.endsWith(suffix));
+
 /**
  * Baileys surfaces group IQ failures as `new Boom(text, { data: code })`, so the
  * numeric code usually lives on `data`. Other call sites put a node or a message
@@ -120,8 +124,7 @@ function pnFor(meta: GroupMetadata | undefined, jid: string): string {
  */
 export function labelFor(jid: string): string {
   const bare = userPart(jid);
-  const isPhone = PHONE_JID_SUFFIXES.some((suffix) => jid.endsWith(suffix));
-  return isPhone ? `+${digits(bare)}` : `@${bare}`;
+  return isPhoneJid(jid) ? `+${digits(bare)}` : `@${bare}`;
 }
 
 /**

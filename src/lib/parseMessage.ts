@@ -32,6 +32,7 @@ export interface ParsedMessage {
   chatJid: string;
   senderJid: string;
   senderPn: string;
+  senderLid: string;
   isGroup: boolean;
   isOwner: boolean;
   isAdmin: boolean;
@@ -154,6 +155,7 @@ export async function parseMessage(
     chatJid,
     senderJid,
     senderPn,
+    senderLid,
     isGroup,
     isOwner: perms.isOwner,
     isAdmin: perms.isAdmin,

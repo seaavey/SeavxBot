@@ -7,8 +7,9 @@ import {
   createSettingsStore,
   type SettingsStore,
 } from "@/lib/settings";
+import { USERS_TABLE_SQL, createUserStore, type UserStore } from "@/lib/users";
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const DEFAULT_PATH = "data/seavxbot.db";
 
 /**
@@ -29,10 +30,12 @@ function migrate(db: Database): void {
   const row = db
     .query<{ user_version: number }, []>("PRAGMA user_version")
     .get();
-  if ((row?.user_version ?? 0) >= SCHEMA_VERSION) return;
+  const version = row?.user_version ?? 0;
+  if (version >= SCHEMA_VERSION) return;
 
   db.transaction(() => {
-    db.exec(SETTINGS_TABLE_SQL);
+    if (version < 1) db.exec(SETTINGS_TABLE_SQL);
+    if (version < 2) db.exec(USERS_TABLE_SQL);
     // A literal: PRAGMA does not accept bound parameters.
     db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   })();
@@ -53,6 +56,7 @@ export function openDatabase(file: string): Database {
 
 let handle: Database | undefined;
 let store: SettingsStore | undefined;
+let users: UserStore | undefined;
 
 /** Opened on first use so importing this module never touches the disk. */
 export function getDb(): Database {
@@ -66,4 +70,9 @@ export function getGroupSettings(): SettingsStore {
     goodbye_text: botConfig.messages?.goodbye_text || FALLBACK_GOODBYE,
   });
   return store;
+}
+
+export function getUsers(): UserStore {
+  users ??= createUserStore(getDb());
+  return users;
 }
