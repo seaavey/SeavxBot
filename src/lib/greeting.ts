@@ -1,11 +1,10 @@
 import {
-  areJidsSameUser,
   type GroupParticipant,
   type ParticipantAction,
   type WASocket,
 } from "@whiskeysockets/baileys";
 import { getGroupMetadata, invalidateGroupMetadata } from "@/lib/groupCache";
-import { labelFor, userPart } from "@/lib/group";
+import { isBot, labelFor, participantJid, userPart } from "@/lib/identity";
 import type { SettingsStore } from "@/lib/settings";
 
 export interface GreetingMember {
@@ -54,14 +53,7 @@ function displayName(participant: GroupParticipant): string {
   return (
     participant.name ||
     participant.notify ||
-    labelFor(participant.phoneNumber || participant.id)
-  );
-}
-
-/** The bot's own JID must never be greeted or said goodbye to. */
-function isSelf(sock: WASocket, jid: string): boolean {
-  return [sock.user?.id, sock.user?.lid].some(
-    (self) => self && areJidsSameUser(self, jid),
+    labelFor(participantJid(participant))
   );
 }
 
@@ -80,7 +72,7 @@ export async function handleParticipantsUpdate(
     if (!settings[flag]) return;
 
     const members = update.participants
-      .filter((participant) => !isSelf(sock, participant.id))
+      .filter((participant) => !isBot(sock, participant.id))
       .map((participant) => ({
         jid: participant.id,
         name: displayName(participant),

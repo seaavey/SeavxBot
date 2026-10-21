@@ -6,10 +6,7 @@ import {
   fetchLatestBaileysVersion,
   isJidStatusBroadcast,
   isJidNewsletter,
-  type AnyMessageContent,
   type CacheStore,
-  type MiscMessageGenerationOptions,
-  type WAMessage,
   type WASocket,
 } from "@whiskeysockets/baileys";
 import type { Boom } from "@hapi/boom";
@@ -18,21 +15,20 @@ import pino from "pino";
 import QRCode from "qrcode";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { parseMessage, type ParsedMessage } from "@/lib/parseMessage";
+import { authOptions, logLevel } from "@/lib/config";
+import { loadCommands } from "@/lib/commandLoader";
+import { handleMessage } from "@/lib/dispatch";
 import { logToFile } from "@/lib/logger";
-import { botConfig } from "@/lib/config";
-import { loadCommands, getCommand } from "@/lib/commandLoader";
 import { getGroupMetadata, invalidateGroupMetadata } from "@/lib/groupCache";
 import { getGroupSettings, getUsers } from "@/lib/db";
 import { handleParticipantsUpdate } from "@/lib/greeting";
-import { isBot, syncGroupUsers } from "@/lib/userSync";
-import { mentionPhones } from "@/lib/mentions";
-import type { Command } from "@/lib/types";
+import { syncGroupUsers } from "@/lib/userSync";
+import { digits, isBot } from "@/lib/identity";
 
 const PAIRING_CODE_DELAY_MS = 3000;
 const PHONE_PROMPT = "Phone number (e.g. 628xxx): ";
 
-const logger = pino({ level: botConfig.logging.level || "warn" });
+const logger = pino({ level: logLevel });
 const msgRetryCounterCache = new NodeCache({
   stdTTL: 5 * 60,
   useClones: false,
@@ -44,8 +40,6 @@ interface AuthChoice {
   method: AuthMethod;
   phone: string;
 }
-
-const digits = (value?: string): string => (value ?? "").replace(/\D/g, "");
 
 /** Reads one line from the terminal; the interface is closed per call so no
  *  input stream lingers across reconnects. */
@@ -62,7 +56,7 @@ async function promptLine(question: string): Promise<string> {
 async function resolveAuth(isRegistered: boolean): Promise<AuthChoice | null> {
   if (isRegistered) return null;
 
-  const configured = botConfig.auth.default_method;
+  const configured = authOptions.defaultMethod;
   let method: AuthMethod;
 
   if (configured === "pairing" || configured === "qr") {
@@ -74,7 +68,7 @@ async function resolveAuth(isRegistered: boolean): Promise<AuthChoice | null> {
     method = (await promptLine("Select (1 or 2): ")) === "1" ? "pairing" : "qr";
   }
 
-  const phone = digits(botConfig.auth.phone_number);
+  const phone = digits(authOptions.phoneNumber);
   const resolvedPhone =
     method === "pairing" && !phone
       ? digits(await promptLine(PHONE_PROMPT))
@@ -98,124 +92,8 @@ async function renderQR(QR: string): Promise<void> {
   }
 }
 
-function createReply(sock: WASocket, msg: ParsedMessage) {
-  return async (
-    content: string | AnyMessageContent,
-    options?: MiscMessageGenerationOptions,
-  ) => {
-    // Phone numbers in a text reply become real @tags; the sender is not
-    // tagged automatically, only numbers the reply actually names.
-    const res = await sock.sendMessage(
-      msg.chatJid,
-      typeof content === "string" ? mentionPhones(content) : content,
-      { quoted: msg.raw, ...options },
-    );
-    logToFile("SENT_REPLY", res);
-    return res;
-  };
-}
-
-/** Reactions are cosmetic: a deleted message or refused reaction must not fail
- *  the command that sent it. */
-function createReact(sock: WASocket, msg: ParsedMessage) {
-  return (text: string) =>
-    sock
-      .sendMessage(msg.chatJid, { react: { text, key: msg.key } })
-      .catch(() => {});
-}
-
-/** First unmet guard for `cmd`, or undefined when the sender may run it. */
-function denyReason(cmd: Command, msg: ParsedMessage): string | undefined {
-  const msgs = botConfig.messages;
-
-  if (cmd.ownerOnly && !msg.isOwner) {
-    return msgs?.owner_only || "🚩 Owner access required.";
-  }
-  if (cmd.groupOnly && !msg.isGroup) {
-    return msgs?.group_only || "🚩 Group chat required.";
-  }
-  if (cmd.adminOnly && !msg.isAdmin && !msg.isOwner) {
-    return msgs?.admin_only || "🚩 Group admin required.";
-  }
-  if (cmd.botAdminOnly && !msg.isBotAdmin) {
-    return msgs?.bot_admin_only || "🚩 Bot admin privileges required.";
-  }
-
-  return undefined;
-}
-
-function describeIncoming(msg: ParsedMessage): string {
-  const cmd = msg.isCmd ? msg.command : "-";
-  return (
-    `[${msg.chatJid}] ${msg.pushName} (${msg.type}) [Cmd: ${cmd}] ` +
-    `[Owner: ${msg.isOwner}, Admin: ${msg.isAdmin}, BotAdmin: ${msg.isBotAdmin}]: ` +
-    msg.body
-  );
-}
-
-async function handleMessage(sock: WASocket, raw: WAMessage): Promise<void> {
-  logToFile("RAW_UPSERT", raw);
-
-  // Own messages (linked devices, peer-data echoes) never dispatch.
-  if (raw.key?.fromMe) return;
-
-  const msg = await parseMessage(sock, raw, {
-    prefixes: botConfig.prefixes,
-    ownerNumbers: botConfig.owners,
-  });
-  if (!msg) return;
-
-  logToFile("PARSED_MSG", msg);
-
-  if (botConfig.features?.read_message) {
-    await sock.readMessages([msg.key]);
-  }
-
-  console.log(describeIncoming(msg));
-
-  const reply = createReply(sock, msg);
-
-  const cmd = msg.isCmd ? getCommand(msg.command) : undefined;
-  try {
-    const store = getUsers();
-    store.touch(
-      { jid: msg.senderJid, lid: msg.senderLid, name: msg.pushName },
-      Boolean(cmd),
-    );
-    // The owner is premium by definition, so no `.premium` run is needed.
-    if (msg.isOwner) store.ensurePremium(msg.senderJid, msg.senderJid);
-  } catch (err) {
-    // Activity counts must never stop the command that was about to run.
-    console.error("Failed to record user activity:", err);
-  }
-
-  if (!cmd) return;
-
-  const denial = denyReason(cmd, msg);
-
-  if (denial) {
-    await reply(denial);
-    return;
-  }
-
-  try {
-    await cmd.run({
-      sock,
-      msg,
-      reply,
-      react: createReact(sock, msg),
-    });
-  } catch (err) {
-    console.error(`Error executing command [${cmd.name}]:`, err);
-    logToFile("CMD_ERROR", { cmd: cmd.name, error: String(err) });
-    await reply(botConfig.messages?.error || "🚩 Command execution failed.");
-  }
-}
-
 async function connect(): Promise<void> {
-  const { state, saveCreds } = await useMultiFileAuthState(
-    botConfig.auth.dir || "auth_info",
-  );
+  const { state, saveCreds } = await useMultiFileAuthState(authOptions.dir);
   const { version, isLatest } = await fetchLatestBaileysVersion();
   console.log(`Using WA v${version.join(".")}, isLatest: ${isLatest}`);
 

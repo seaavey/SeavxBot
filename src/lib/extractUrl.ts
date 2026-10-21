@@ -3,15 +3,6 @@ const URL_REGEX =
   /https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)/gi;
 
 /**
- * Extracts all valid HTTP/HTTPS URLs from a given string.
- */
-export function extractUrls(text: string): string[] {
-  if (!text) return [];
-  const matches = text.match(URL_REGEX);
-  return matches ? Array.from(matches) : [];
-}
-
-/**
  * Finds and returns the first HTTP/HTTPS URL from a given string, or null if none.
  */
 export function extractFirstUrl(text: string): string | null {

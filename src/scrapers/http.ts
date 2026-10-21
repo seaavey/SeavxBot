@@ -38,21 +38,3 @@ export async function getJson<T>(
     return null;
   }
 }
-
-/** Reads a media size for upload decisions. Some CDNs intermittently refuse HEAD
- *  (TikTok returns 503 while a ranged GET works), so a failed probe reports
- *  "unknown" rather than a bogus length. */
-export async function probeSize(url: string): Promise<number | undefined> {
-  try {
-    const res = await fetch(url, {
-      method: "HEAD",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    if (!res.ok) return undefined;
-
-    const length = res.headers.get("content-length");
-    return length ? Number(length) : undefined;
-  } catch {
-    return undefined;
-  }
-}

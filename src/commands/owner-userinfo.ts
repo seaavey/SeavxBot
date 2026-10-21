@@ -1,6 +1,7 @@
 import type { Command } from "@/lib/types";
 import { getUsers } from "@/lib/db";
-import { isPhoneJid, labelFor, resolveTargets, userPart } from "@/lib/group";
+import { resolveTargets } from "@/lib/group";
+import { isPhoneJid, labelFor, userPart } from "@/lib/identity";
 import { profileBody } from "@/lib/profile";
 
 export const userinfoCommand: Command = {

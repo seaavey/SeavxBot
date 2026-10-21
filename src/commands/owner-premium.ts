@@ -1,6 +1,7 @@
 import type { Command } from "@/lib/types";
 import { getUsers } from "@/lib/db";
-import { labelFor, resolveTargets } from "@/lib/group";
+import { resolveTargets } from "@/lib/group";
+import { labelFor } from "@/lib/identity";
 
 const DAY = 86_400_000;
 

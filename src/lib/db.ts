@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import fs from "node:fs";
 import path from "node:path";
-import { botConfig } from "@/lib/config";
+import { databasePath, settingsDefaults } from "@/lib/config";
 import {
   SETTINGS_TABLE_SQL,
   createSettingsStore,
@@ -10,17 +10,6 @@ import {
 import { USERS_TABLE_SQL, createUserStore, type UserStore } from "@/lib/users";
 
 const SCHEMA_VERSION = 2;
-const DEFAULT_PATH = "data/seavxbot.db";
-
-/**
- * The env override keeps tests and one-off scripts off the live database
- * without teaching every caller to thread a path through.
- */
-const configuredPath = (): string =>
-  process.env.SEAVXBOT_DB_PATH || botConfig.storage?.path || DEFAULT_PATH;
-
-const FALLBACK_WELCOME = "Welcome {mention} to *{group}*!";
-const FALLBACK_GOODBYE = "Goodbye {name}.";
 
 /**
  * SQLite's own `user_version` doubles as the migration cursor, so there is no
@@ -60,15 +49,12 @@ let users: UserStore | undefined;
 
 /** Opened on first use so importing this module never touches the disk. */
 export function getDb(): Database {
-  handle ??= openDatabase(configuredPath());
+  handle ??= openDatabase(databasePath);
   return handle;
 }
 
 export function getGroupSettings(): SettingsStore {
-  store ??= createSettingsStore(getDb(), {
-    welcome_text: botConfig.messages?.welcome_text || FALLBACK_WELCOME,
-    goodbye_text: botConfig.messages?.goodbye_text || FALLBACK_GOODBYE,
-  });
+  store ??= createSettingsStore(getDb(), settingsDefaults);
   return store;
 }
 

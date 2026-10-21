@@ -1,13 +1,13 @@
 import type { Command } from "@/lib/types";
 import { commands } from "@/lib/commandLoader";
-import { botConfig } from "@/lib/config";
+import { botName, prefixes } from "@/lib/config";
 
 export const menuCommand: Command = {
   name: "menu",
   description: "Display available bot commands",
   aliases: ["help"],
   run: async ({ reply, msg }) => {
-    const prefix = msg.prefix || botConfig.prefixes[0] || "!";
+    const prefix = msg.prefix || prefixes[0] || "!";
     const list = Array.from(commands.values())
       .map(
         (c) =>
@@ -15,7 +15,7 @@ export const menuCommand: Command = {
       )
       .join("\n");
 
-    const text = `*${botConfig.bot_name} Menu*\n\nPrefixes: ${botConfig.prefixes.join(" ")}\n\n${list}`;
+    const text = `*${botName} Menu*\n\nPrefixes: ${prefixes.join(" ")}\n\n${list}`;
     await reply(text);
   },
 };

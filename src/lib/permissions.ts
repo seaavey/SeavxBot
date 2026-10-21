@@ -2,9 +2,9 @@ import {
   type WASocket,
   type GroupMetadata,
   jidNormalizedUser,
-  areJidsSameUser,
 } from "@whiskeysockets/baileys";
 import { getGroupMetadata } from "@/lib/groupCache";
+import { sameUser } from "@/lib/identity";
 
 export interface ResolvedPermissions {
   isOwner: boolean;
@@ -23,19 +23,6 @@ export interface ResolvePermissionsParams {
   fromMe: boolean;
   isGroup: boolean;
   ownerNumbers?: string[];
-}
-
-/**
- * Identity comparison that refuses empty input. `areJidsSameUser("", "")` is
- * `true` — it only compares the decoded user part — so an absent sender LID
- * would otherwise match an absent participant LID.
- */
-function sameUser(
-  left: string | undefined,
-  right: string | undefined,
-): boolean {
-  if (!left || !right) return false;
-  return areJidsSameUser(left, right);
 }
 
 export async function resolvePermissions({
@@ -57,7 +44,7 @@ export async function resolvePermissions({
   const isOwner = Boolean(
     fromMe ||
     (senderNumber && ownerList.includes(senderNumber)) ||
-    (botJid && areJidsSameUser(senderJid, botJid)),
+    (botJid && sameUser(senderJid, botJid)),
   );
 
   let isAdmin = false;

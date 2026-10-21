@@ -19,7 +19,6 @@ export interface CommandContext {
 export interface Command {
   name: string;
   description?: string;
-  category?: string;
   aliases?: string[];
   ownerOnly?: boolean;
   adminOnly?: boolean;

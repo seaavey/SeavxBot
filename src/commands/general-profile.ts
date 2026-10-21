@@ -1,6 +1,6 @@
 import type { Command } from "@/lib/types";
 import { getUsers } from "@/lib/db";
-import { labelFor } from "@/lib/group";
+import { labelFor } from "@/lib/identity";
 import { profileBody } from "@/lib/profile";
 
 export const profileCommand: Command = {

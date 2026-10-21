@@ -1,5 +1,4 @@
 import {
-  areJidsSameUser,
   jidNormalizedUser,
   type GroupMetadata,
   type WASocket,
@@ -7,6 +6,7 @@ import {
 import type { Boom } from "@hapi/boom";
 import type { ParsedMessage } from "@/lib/parseMessage";
 import { patchGroupMetadata } from "@/lib/groupCache";
+import { digits, labelFor, sameUser, userPart } from "@/lib/identity";
 
 export type MemberAction = "add" | "remove" | "promote" | "demote";
 
@@ -36,15 +36,6 @@ const ACTION_LABEL: Record<MemberAction, string> = {
   promote: "Promoted",
   demote: "Demoted",
 };
-
-const PHONE_JID_SUFFIXES = ["@s.whatsapp.net", "@hosted"];
-
-export const userPart = (jid: string): string => jid.split("@")[0] || jid;
-const digits = (value: string): string => value.replace(/\D/g, "");
-
-/** A dialable phone identity (PN), as opposed to a LID or a group. */
-export const isPhoneJid = (jid: string): boolean =>
-  PHONE_JID_SUFFIXES.some((suffix) => jid.endsWith(suffix));
 
 /**
  * Baileys surfaces group IQ failures as `new Boom(text, { data: code })`, so the
@@ -111,20 +102,8 @@ export async function runSettingOp(
  * (PN) whenever the metadata carries it, and only fall back to the LID itself.
  */
 function pnFor(meta: GroupMetadata | undefined, jid: string): string {
-  const participant = meta?.participants.find((p) =>
-    areJidsSameUser(p.id, jid),
-  );
+  const participant = meta?.participants.find((p) => sameUser(p.id, jid));
   return participant?.phoneNumber || jid;
-}
-
-/**
- * `+628xxx` for a phone JID, `@1234567890` for anything else — a group, or a
- * LID that has no PN in the metadata. A LID must never be dressed up as a
- * phone number: those digits are an internal id, not something dialable.
- */
-export function labelFor(jid: string): string {
-  const bare = userPart(jid);
-  return isPhoneJid(jid) ? `+${digits(bare)}` : `@${bare}`;
 }
 
 /**
@@ -186,7 +165,7 @@ export async function runMemberAction(
       Boolean(jid),
     );
     targets = targets.filter(
-      (target) => !self.some((jid) => areJidsSameUser(jid, target.jid)),
+      (target) => !self.some((jid) => sameUser(jid, target.jid)),
     );
     if (targets.length === 0) return "🚩 I won't remove myself.";
   }
@@ -208,7 +187,7 @@ export async function runMemberAction(
     // a LID-group answer arrives as `@lid` even though we sent the PN. Match on
     // identity first, then fall back to the metadata mapping — never label the
     // raw LID, which is an internal id the admin has never seen.
-    const known = targets.find((target) => areJidsSameUser(target.jid, jid));
+    const known = targets.find((target) => sameUser(target.jid, jid));
     const label = known?.label ?? labelFor(pnFor(msg.groupMetadata, jid));
     const ok = result.status === "200";
     const outcome = STATUS_TEXT[result.status] ?? `error ${result.status}`;

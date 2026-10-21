@@ -1,6 +1,6 @@
 import type { Command } from "@/lib/types";
-import { botConfig } from "@/lib/config";
 import { getGroupSettings } from "@/lib/db";
+import { settingsDefaults } from "@/lib/config";
 import {
   ANTILINK_MODES,
   type AntilinkMode,
@@ -8,9 +8,6 @@ import {
 } from "@/lib/settings";
 
 const MAX_TEXT = 500;
-
-const FALLBACK_WELCOME = "Welcome {mention} to *{group}*!";
-const FALLBACK_GOODBYE = "Goodbye {name}.";
 
 const usage = (prefix: string): string =>
   [
@@ -87,12 +84,7 @@ export const settingsCommand: Command = {
       case "welcometext":
       case "goodbyetext": {
         const key = sub === "welcometext" ? "welcome_text" : "goodbye_text";
-        const fallback =
-          sub === "welcometext" ? FALLBACK_WELCOME : FALLBACK_GOODBYE;
-        const configured =
-          (sub === "welcometext"
-            ? botConfig.messages?.welcome_text
-            : botConfig.messages?.goodbye_text) || fallback;
+        const defaults = settingsDefaults;
 
         if (!value) {
           await reply(`🚩 Use: ${msg.prefix}settings ${sub} <text>|default`);
@@ -103,7 +95,7 @@ export const settingsCommand: Command = {
           return;
         }
 
-        const text = value === "default" ? configured : value;
+        const text = value === "default" ? defaults[key] : value;
         store.set(msg.chatJid, key, text);
         await reply(`✅ Saved:\n\n${text}`);
         return;
