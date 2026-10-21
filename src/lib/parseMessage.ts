@@ -3,6 +3,7 @@ import {
   type WASocket,
   type GroupMetadata,
   type proto,
+  getDevice,
   isPnUser,
   isLidUser,
   isHostedPnUser,
@@ -28,6 +29,8 @@ export interface ParsedMessage {
   raw: WAMessage;
   key: proto.IMessageKey;
   id: string;
+  /** The sender's device, guessed from the message ID (e.g. `ios`, `android`). */
+  device: ReturnType<typeof getDevice>;
   fromMe: boolean;
   chatJid: string;
   senderJid: string;
@@ -151,6 +154,7 @@ export async function parseMessage(
     raw: msg,
     key,
     id: key.id || "",
+    device: getDevice(key.id || ""),
     fromMe,
     chatJid,
     senderJid,

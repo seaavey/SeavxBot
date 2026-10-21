@@ -42,6 +42,21 @@ export async function toDataUrl(
   message: WAMessage,
   mimetype?: string | null,
 ): Promise<string> {
-  const bytes = await downloadMediaMessage(message, "buffer", {});
+  const content = message.message;
+  if (content) {
+    for (const key of Object.keys(content)) {
+      const val = (content as Record<string, unknown>)[key];
+      if (val && typeof val === "object" && "url" in val && typeof val.url === "string") {
+        if (val.url.includes("a.whatsapp.net")) {
+          val.url = val.url.replace("a.whatsapp.net", "mmg.whatsapp.net");
+        }
+      }
+    }
+  }
+  const bytes = (await downloadMediaMessage(
+    message,
+    "buffer",
+    { host: "mmg.whatsapp.net" } as unknown as Parameters<typeof downloadMediaMessage>[2],
+  )) as Buffer;
   return `data:${mimetype ?? "image/jpeg"};base64,${bytes.toString("base64")}`;
 }

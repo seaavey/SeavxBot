@@ -72,7 +72,10 @@ export async function handleParticipantsUpdate(
     if (!settings[flag]) return;
 
     const members = update.participants
-      .filter((participant) => !isBot(sock, participant.id))
+      .filter(
+        (participant) =>
+          !isBot(sock, participant.id, participant.lid, participant.phoneNumber),
+      )
       .map((participant) => ({
         jid: participant.id,
         name: displayName(participant),

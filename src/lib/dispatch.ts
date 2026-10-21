@@ -13,7 +13,8 @@ import {
   readMessages,
 } from "@/lib/config";
 import { getCommand } from "@/lib/commandLoader";
-import { getUsers } from "@/lib/db";
+import { getGroupSettings, getUsers } from "@/lib/db";
+import { handleAntilink } from "@/lib/antilink";
 import { mentionPhones } from "@/lib/mentions";
 import type { Command } from "@/lib/types";
 
@@ -90,6 +91,13 @@ export async function handleMessage(
   }
 
   console.log(describeIncoming(msg));
+
+  try {
+    const shouldAbort = await handleAntilink(sock, msg, getGroupSettings());
+    if (shouldAbort) return;
+  } catch (err) {
+    console.error("Antilink check failed:", err);
+  }
 
   const reply = createReply(sock, msg);
 

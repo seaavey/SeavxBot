@@ -15,7 +15,9 @@ export const profileCommand: Command = {
 
     // No mention: a self-profile must not ping the sender.
     const header = user.name || labelFor(user.jid);
-    await reply({ text: [`*${header}*`, ...profileBody(user)].join("\n") });
+    await reply({
+      text: [`*${header}*`, ...profileBody(user, msg.device)].join("\n"),
+    });
   },
 };
 
