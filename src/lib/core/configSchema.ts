@@ -28,6 +28,10 @@ export interface BotConfig {
   features?: {
     read_message?: boolean;
   };
+  sticker?: {
+    pack?: string;
+    author?: string;
+  };
   messages?: {
     owner_only?: string;
     admin_only?: string;
@@ -135,6 +139,13 @@ export function parseConfig(value: unknown): BotConfig {
     problems.push("features.read_message must be true or false");
   }
 
+  const sticker = section("sticker");
+  for (const key of ["pack", "author"] as const) {
+    if (sticker[key] !== undefined && typeof sticker[key] !== "string") {
+      problems.push(`sticker.${key} must be a string`);
+    }
+  }
+
   const messages = section("messages");
   for (const [key, text] of Object.entries(messages)) {
     if (typeof text !== "string") {
@@ -160,6 +171,10 @@ export function parseConfig(value: unknown): BotConfig {
     logging: { level: (logging.level as LogLevel | undefined) || "warn" },
     storage: { path: storage.path as string | undefined },
     features: { read_message: features.read_message === true },
+    sticker: {
+      pack: (sticker.pack as string | undefined) || "",
+      author: (sticker.author as string | undefined) || "",
+    },
     messages: messages as BotConfig["messages"],
   };
 }

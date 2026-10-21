@@ -1,19 +1,28 @@
 import { Database } from "bun:sqlite";
 import fs from "node:fs";
 import path from "node:path";
-import { databasePath, settingsDefaults } from "@/lib/core/config";
+import {
+  databasePath,
+  settingsDefaults,
+  stickerDefaults,
+} from "@/lib/core/config";
 import {
   SETTINGS_TABLE_SQL,
   createSettingsStore,
   type SettingsStore,
 } from "@/lib/group/settings";
 import {
+  BOT_SETTINGS_TABLE_SQL,
+  createStickerPackStore,
+  type StickerPackStore,
+} from "@/lib/media/stickerPack";
+import {
   USERS_TABLE_SQL,
   createUserStore,
   type UserStore,
 } from "@/lib/user/users";
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 /**
  * SQLite's own `user_version` doubles as the migration cursor, so there is no
@@ -29,6 +38,7 @@ function migrate(db: Database): void {
   db.transaction(() => {
     if (version < 1) db.exec(SETTINGS_TABLE_SQL);
     if (version < 2) db.exec(USERS_TABLE_SQL);
+    if (version < 3) db.exec(BOT_SETTINGS_TABLE_SQL);
     // A literal: PRAGMA does not accept bound parameters.
     db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   })();
@@ -50,6 +60,7 @@ function openDatabase(file: string): Database {
 let handle: Database | undefined;
 let store: SettingsStore | undefined;
 let users: UserStore | undefined;
+let stickerPack: StickerPackStore | undefined;
 
 /** Opened on first use so importing this module never touches the disk. */
 function getDb(): Database {
@@ -60,6 +71,11 @@ function getDb(): Database {
 export function getGroupSettings(): SettingsStore {
   store ??= createSettingsStore(getDb(), settingsDefaults);
   return store;
+}
+
+export function getStickerPack(): StickerPackStore {
+  stickerPack ??= createStickerPackStore(getDb(), stickerDefaults);
+  return stickerPack;
 }
 
 export function getUsers(): UserStore {

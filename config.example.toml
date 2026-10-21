@@ -30,6 +30,11 @@ path = "data/seavxbot.db"
 # Automatically mark incoming messages as read (blue tick / ACK)
 read_message = true
 
+# Sticker pack name and publisher in the WebP EXIF. Empty falls back to bot_name.
+[sticker]
+pack = "Powered By"
+author = "SeavxBot"
+
 [messages]
 owner_only = "🚩 This command is reserved for the bot owner."
 admin_only = "🚩 Group admin privileges required."

@@ -15,8 +15,10 @@ async function convert(
   options?: ConvertOptions,
 ): Promise<Buffer> {
   const id = randomUUID();
-  const inputPath = join(tmpdir(), `seavxbot-${id}.${inputExt}`);
-  const outputPath = join(tmpdir(), `seavxbot-${id}.${outputExt}`);
+  // Distinct suffixes: a same-format conversion (webp → webp) would otherwise
+  // hand ffmpeg one path for input and output, which it refuses.
+  const inputPath = join(tmpdir(), `seavxbot-${id}-in.${inputExt}`);
+  const outputPath = join(tmpdir(), `seavxbot-${id}-out.${outputExt}`);
   let timer: ReturnType<typeof setTimeout> | undefined;
   let proc: ReturnType<typeof Bun.spawn> | undefined;
 
@@ -47,6 +49,83 @@ async function convert(
       }),
     );
   }
+}
+
+const STICKER_SIZE = 512;
+const STILL_STICKER_CAP = 100 * 1024;
+const ANIMATED_STICKER_CAP = 500 * 1024;
+const STILL_STICKER_QUALITIES = [80, 40];
+const ANIMATED_STICKER_QUALITIES = [50, 35];
+const STICKER_FPS = 15;
+const ANIMATED_STICKER_DURATION = 6;
+
+export interface StickerOptions {
+  /** Video input: encode an animated WebP. */
+  animated: boolean;
+  /** Extension of the source bytes; the image2 demuxer needs it, ffmpeg probes the rest. */
+  inputExt: string;
+}
+
+/** ffmpeg args for one sticker encode; pure so the codec choice is testable. */
+export function stickerArgs(
+  inputPath: string,
+  outputPath: string,
+  options: { animated: boolean; quality: number },
+): string[] {
+  const filter = [
+    "format=rgba",
+    `scale=${STICKER_SIZE}:${STICKER_SIZE}:force_original_aspect_ratio=decrease`,
+    `pad=${STICKER_SIZE}:${STICKER_SIZE}:(ow-iw)/2:(oh-ih)/2:color=0x00000000`,
+  ];
+  if (options.animated) filter.push(`fps=${STICKER_FPS}`);
+
+  return [
+    "ffmpeg",
+    "-y",
+    "-i",
+    inputPath,
+    ...(options.animated
+      ? ["-t", String(ANIMATED_STICKER_DURATION)]
+      : ["-frames:v", "1"]),
+    "-vf",
+    filter.join(","),
+    "-c:v",
+    options.animated ? "libwebp_anim" : "libwebp",
+    ...(options.animated
+      ? ["-lossless", "0", "-q:v", String(options.quality), "-loop", "0", "-an"]
+      : ["-quality", String(options.quality)]),
+    "-pix_fmt",
+    "yuva420p",
+    ...(options.animated ? ["-fps_mode", "passthrough"] : []),
+    outputPath,
+  ];
+}
+
+export async function toSticker(
+  inputBuffer: Buffer,
+  options: StickerOptions,
+): Promise<Buffer> {
+  const qualities = options.animated
+    ? ANIMATED_STICKER_QUALITIES
+    : STILL_STICKER_QUALITIES;
+  const cap = options.animated ? ANIMATED_STICKER_CAP : STILL_STICKER_CAP;
+  let result: Buffer | undefined;
+
+  for (const quality of qualities) {
+    result = await convert(
+      inputBuffer,
+      options.inputExt,
+      "webp",
+      (inputPath, outputPath) =>
+        stickerArgs(inputPath, outputPath, {
+          animated: options.animated,
+          quality,
+        }),
+    );
+    if (result.length <= cap) return result;
+  }
+
+  return result!;
 }
 
 export function webpToMp4(

@@ -43,6 +43,11 @@ export const guardMessages = {
   error: cfg.messages?.error || "🚩 Command execution failed.",
 };
 
+export const stickerDefaults = {
+  pack: cfg.sticker?.pack || botName,
+  author: cfg.sticker?.author || botName,
+};
+
 /** The templates a group falls back to when it has none of its own. */
 export const settingsDefaults = {
   welcome_text: cfg.messages?.welcome_text || "Welcome {mention} to *{group}*!",
