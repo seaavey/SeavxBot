@@ -1,17 +1,11 @@
 import type { Command } from "@/lib/types";
 import { getUsers } from "@/lib/db";
-import { isPremium } from "@/lib/users";
 import { isPhoneJid, labelFor, resolveTargets, userPart } from "@/lib/group";
-
-const stamp = (ms: number): string => {
-  const date = new Date(ms);
-  return `${date.toLocaleDateString("en-CA")} ${date.toLocaleTimeString("en-GB", { hour12: false })}`;
-};
+import { profileBody } from "@/lib/profile";
 
 export const userinfoCommand: Command = {
   name: "userinfo",
   description: "Show a user's role, premium expiry, and activity",
-  aliases: ["profile"],
   ownerOnly: true,
   run: async ({ sock, msg, reply }) => {
     const [target] = await resolveTargets(sock, msg, msg.args);
@@ -23,10 +17,6 @@ export const userinfoCommand: Command = {
       return;
     }
 
-    const role = isPremium(user)
-      ? `premium (${user.premiumUntil === null ? "permanent" : stamp(user.premiumUntil)})`
-      : "free";
-
     const phone = isPhoneJid(user.jid);
     const number = userPart(user.jid);
     const header = phone ? `@${number}` : labelFor(user.jid);
@@ -34,11 +24,7 @@ export const userinfoCommand: Command = {
     const lines = [
       `*${header}*`,
       user.name ? `Name: ${user.name}` : "",
-      `Role: ${role}`,
-      `Messages: ${user.messageCount}`,
-      `Commands: ${user.commandCount}`,
-      `First seen: ${stamp(user.firstSeenAt)}`,
-      `Last seen: ${stamp(user.lastSeenAt)}`,
+      ...profileBody(user),
     ];
 
     await reply({
