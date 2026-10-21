@@ -1,6 +1,6 @@
-import type { Command } from "@/lib/types";
-import { findImageSource, toDataUrl } from "@/lib/imageSource";
-import { removeBackground } from "@/scrapers/remove-background";
+import type { Command } from "@/lib/core/types";
+import { findImageSource, toDataUrl } from "@/lib/media/imageSource";
+import { removeBackground } from "@/scrapers/iloveimg";
 
 export const removeBackgroundCommand: Command = {
   name: "removebg",

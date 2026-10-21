@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Command } from "@/lib/types";
+import type { Command } from "@/lib/core/types";
 
 export const commands = new Map<string, Command>();
 export const aliases = new Map<string, string>();
 
 export async function loadCommands(
-  dir = path.resolve(import.meta.dir, "../commands"),
+  dir = path.resolve(import.meta.dir, "../../commands"),
 ): Promise<void> {
   commands.clear();
   aliases.clear();
@@ -27,10 +27,14 @@ export async function loadCommands(
     if (entry.name.includes(".test.") || entry.name.includes(".spec."))
       continue;
 
-    const module = await import(`${fullPath}?t=${Date.now()}`);
-    const cmd: Command = module.default || Object.values(module)[0];
+    const { default: cmd } = (await import(fullPath)) as { default?: Command };
 
-    if (!cmd?.name || typeof cmd.run !== "function") continue;
+    if (!cmd?.name || typeof cmd.run !== "function") {
+      // Silent skips hide a broken export until someone notices the command
+      // missing from the menu.
+      console.warn(`Skipping ${fullPath}: no default export with name + run`);
+      continue;
+    }
 
     commands.set(cmd.name.toLowerCase(), cmd);
 

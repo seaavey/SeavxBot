@@ -3,9 +3,17 @@ import {
   type ParticipantAction,
   type WASocket,
 } from "@whiskeysockets/baileys";
-import { getGroupMetadata, invalidateGroupMetadata } from "@/lib/groupCache";
-import { isBot, labelFor, participantJid, userPart } from "@/lib/identity";
-import type { SettingsStore } from "@/lib/settings";
+import {
+  getGroupMetadata,
+  invalidateGroupMetadata,
+} from "@/lib/group/groupCache";
+import {
+  isBot,
+  labelFor,
+  participantJid,
+  userPart,
+} from "@/lib/message/identity";
+import type { SettingsStore } from "@/lib/group/settings";
 
 export interface GreetingMember {
   jid: string;
@@ -29,10 +37,7 @@ export interface ParticipantsUpdate {
  * typo in a template should be visible to the admin who wrote it, not silently
  * dropped.
  */
-export function renderGreeting(
-  template: string,
-  context: GreetingContext,
-): string {
+function renderGreeting(template: string, context: GreetingContext): string {
   const mentions = context.members.map((m) => `@${userPart(m.jid)}`).join(" ");
   const names = context.members.map((m) => m.name).join(", ");
 
@@ -74,7 +79,12 @@ export async function handleParticipantsUpdate(
     const members = update.participants
       .filter(
         (participant) =>
-          !isBot(sock, participant.id, participant.lid, participant.phoneNumber),
+          !isBot(
+            sock,
+            participant.id,
+            participant.lid,
+            participant.phoneNumber,
+          ),
       )
       .map((participant) => ({
         jid: participant.id,

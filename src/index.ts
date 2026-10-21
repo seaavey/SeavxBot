@@ -15,18 +15,26 @@ import pino from "pino";
 import QRCode from "qrcode";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { authOptions, logLevel } from "@/lib/config";
-import { loadCommands } from "@/lib/commandLoader";
-import { handleMessage } from "@/lib/dispatch";
-import { logToFile } from "@/lib/logger";
-import { getGroupMetadata, invalidateGroupMetadata } from "@/lib/groupCache";
-import { getGroupSettings, getUsers } from "@/lib/db";
-import { handleParticipantsUpdate } from "@/lib/greeting";
-import { syncGroupUsers } from "@/lib/userSync";
-import { digits, isBot } from "@/lib/identity";
+import { authOptions, logLevel } from "@/lib/core/config";
+import { loadCommands } from "@/lib/core/commandLoader";
+import { handleMessage } from "@/lib/message/dispatch";
+import { logToFile } from "@/lib/core/logger";
+import {
+  getGroupMetadata,
+  invalidateGroupMetadata,
+} from "@/lib/group/groupCache";
+import { getGroupSettings, getUsers } from "@/lib/core/db";
+import { handleParticipantsUpdate } from "@/lib/group/greeting";
+import { syncGroupUsers } from "@/lib/group/userSync";
+import { digits, isBot } from "@/lib/message/identity";
 
 const PAIRING_CODE_DELAY_MS = 3000;
 const PHONE_PROMPT = "Phone number (e.g. 628xxx): ";
+const RECONNECT_BASE_MS = 1_000;
+const RECONNECT_MAX_MS = 30_000;
+
+/** Backoff state, reset every time the connection opens. */
+let reconnectAttempt = 0;
 
 const logger = pino({ level: logLevel });
 const msgRetryCounterCache = new NodeCache({
@@ -136,6 +144,7 @@ async function connect(): Promise<void> {
     if (QR && !isRegistered && auth?.method !== "pairing") void renderQR(QR);
 
     if (connection === "open") {
+      reconnectAttempt = 0;
       console.log("Connected to WhatsApp successfully!");
       return;
     }
@@ -143,20 +152,34 @@ async function connect(): Promise<void> {
 
     const statusCode = (lastDisconnect?.error as Boom | undefined)?.output
       ?.statusCode;
-    const reconnecting =
-      statusCode !== DisconnectReason.loggedOut &&
-      statusCode !== DisconnectReason.forbidden;
+    // 401 logged out, 403 forbidden and 440 replaced mean the creds are gone or
+    // another session owns them: reconnecting only fights the other end.
+    const terminal =
+      statusCode === DisconnectReason.loggedOut ||
+      statusCode === DisconnectReason.forbidden ||
+      statusCode === DisconnectReason.connectionReplaced;
 
-    console.log(
-      `Connection closed (${statusCode}). Reconnecting: ${reconnecting}`,
-    );
-
-    if (!reconnecting) {
-      console.log("Session terminated. Remove auth_info to re-authenticate.");
+    if (terminal) {
+      console.log(
+        `Connection closed (${statusCode}). Session terminated; remove auth_info to re-authenticate.`,
+      );
       return;
     }
 
-    void connect().catch((err) => console.error("Reconnect failed:", err));
+    const wait = Math.min(
+      RECONNECT_BASE_MS * 2 ** reconnectAttempt,
+      RECONNECT_MAX_MS,
+    );
+    reconnectAttempt += 1;
+    console.log(
+      `Connection closed (${statusCode}). Reconnecting in ${wait}ms (attempt ${reconnectAttempt}).`,
+    );
+
+    setTimeout(
+      () =>
+        void connect().catch((err) => console.error("Reconnect failed:", err)),
+      wait,
+    );
   });
 
   sock.ev.on("messages.upsert", async ({ messages, type }) => {

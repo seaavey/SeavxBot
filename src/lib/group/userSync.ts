@@ -3,9 +3,9 @@ import {
   type GroupParticipant,
   type WASocket,
 } from "@whiskeysockets/baileys";
-import { getGroupMetadata } from "@/lib/groupCache";
-import { isBot, participantJid } from "@/lib/identity";
-import type { UserIdentity, UserStore } from "@/lib/users";
+import { getGroupMetadata } from "@/lib/group/groupCache";
+import { isBot, participantJid } from "@/lib/message/identity";
+import type { UserIdentity, UserStore } from "@/lib/user/users";
 
 const identityOf = (participant: GroupParticipant): UserIdentity => ({
   jid: participantJid(participant),

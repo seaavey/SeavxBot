@@ -16,15 +16,6 @@ export interface SettingsDefaults {
   goodbye_text: string;
 }
 
-export interface SettingsStore {
-  get(jid: string): GroupSettings;
-  set<K extends keyof GroupSettings>(
-    jid: string,
-    key: K,
-    value: GroupSettings[K],
-  ): void;
-}
-
 /** Lives here so the schema bootstrap in db.ts and the tests cannot drift. */
 export const SETTINGS_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS group_settings (
@@ -63,10 +54,7 @@ const GUARDS: Record<keyof GroupSettings, (value: unknown) => boolean> = {
   antilink: (value) => ANTILINK_MODES.includes(value as AntilinkMode),
 };
 
-export function createSettingsStore(
-  db: Database,
-  defaults: SettingsDefaults,
-): SettingsStore {
+export function createSettingsStore(db: Database, defaults: SettingsDefaults) {
   const base: GroupSettings = { ...DEFAULT_SETTINGS, ...defaults };
   const cache = new Map<string, GroupSettings>();
 
@@ -120,3 +108,6 @@ export function createSettingsStore(
 
   return { get, set };
 }
+
+/** The store the factory returns; no separate interface to keep in sync. */
+export type SettingsStore = ReturnType<typeof createSettingsStore>;

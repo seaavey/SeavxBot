@@ -1,5 +1,5 @@
-import type { Command } from "@/lib/types";
-import { runSettingOp } from "@/lib/group";
+import type { Command } from "@/lib/core/types";
+import { runSettingOp } from "@/lib/group/ops";
 
 export const setDescCommand: Command = {
   name: "setdesc",

@@ -1,5 +1,5 @@
-import type { Command } from "@/lib/types";
-import { runMemberAction } from "@/lib/group";
+import type { Command } from "@/lib/core/types";
+import { runMemberAction } from "@/lib/group/ops";
 
 export const kickCommand: Command = {
   name: "kick",

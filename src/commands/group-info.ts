@@ -1,5 +1,5 @@
-import type { Command } from "@/lib/types";
-import { describeGroup } from "@/lib/group";
+import type { Command } from "@/lib/core/types";
+import { describeGroup } from "@/lib/group/ops";
 
 export const groupInfoCommand: Command = {
   name: "groupinfo",

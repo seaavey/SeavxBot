@@ -4,34 +4,13 @@ import path from "node:path";
 const LOGS_DIR = path.resolve(process.cwd(), "logs");
 const LOG_FILE = path.join(LOGS_DIR, "session.log");
 
-// Reset logs on process start
-if (fs.existsSync(LOGS_DIR)) {
-  fs.rmSync(LOGS_DIR, { recursive: true, force: true });
-}
+// Append across runs: a log deleted at import (or at exit) can never be read
+// after the crash it was meant to explain, and deleting it also wipes the log
+// of a second instance sharing the directory.
 fs.mkdirSync(LOGS_DIR, { recursive: true });
-
 const logStream = fs.createWriteStream(LOG_FILE, { flags: "a" });
 
-function cleanup(): void {
-  try {
-    logStream.end();
-    if (fs.existsSync(LOGS_DIR)) {
-      fs.rmSync(LOGS_DIR, { recursive: true, force: true });
-    }
-  } catch {}
-}
-
-// Remove logs folder on process termination
-process.once("exit", cleanup);
-process.once("SIGINT", () => {
-  cleanup();
-  process.exit(0);
-});
-process.once("SIGTERM", () => {
-  cleanup();
-  process.exit(0);
-});
-
+/** Writes one labelled block. Callers own what they put in it. */
 export function logToFile(prefix: string, message: unknown): void {
   const timestamp = new Date().toISOString();
   const content =

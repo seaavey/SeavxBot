@@ -1,13 +1,17 @@
 import { Database } from "bun:sqlite";
 import fs from "node:fs";
 import path from "node:path";
-import { databasePath, settingsDefaults } from "@/lib/config";
+import { databasePath, settingsDefaults } from "@/lib/core/config";
 import {
   SETTINGS_TABLE_SQL,
   createSettingsStore,
   type SettingsStore,
-} from "@/lib/settings";
-import { USERS_TABLE_SQL, createUserStore, type UserStore } from "@/lib/users";
+} from "@/lib/group/settings";
+import {
+  USERS_TABLE_SQL,
+  createUserStore,
+  type UserStore,
+} from "@/lib/user/users";
 
 const SCHEMA_VERSION = 2;
 
@@ -30,7 +34,7 @@ function migrate(db: Database): void {
   })();
 }
 
-export function openDatabase(file: string): Database {
+function openDatabase(file: string): Database {
   fs.mkdirSync(path.dirname(file), { recursive: true });
 
   const db = new Database(file);
@@ -48,7 +52,7 @@ let store: SettingsStore | undefined;
 let users: UserStore | undefined;
 
 /** Opened on first use so importing this module never touches the disk. */
-export function getDb(): Database {
+function getDb(): Database {
   handle ??= openDatabase(databasePath);
   return handle;
 }

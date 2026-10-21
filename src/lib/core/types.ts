@@ -3,7 +3,7 @@ import type {
   AnyMessageContent,
   MiscMessageGenerationOptions,
 } from "@whiskeysockets/baileys";
-import type { ParsedMessage } from "@/lib/parseMessage";
+import type { ParsedMessage } from "@/lib/message/parseMessage";
 
 export interface CommandContext {
   sock: WASocket;

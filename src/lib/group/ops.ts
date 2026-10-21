@@ -4,9 +4,9 @@ import {
   type WASocket,
 } from "@whiskeysockets/baileys";
 import type { Boom } from "@hapi/boom";
-import type { ParsedMessage } from "@/lib/parseMessage";
-import { patchGroupMetadata } from "@/lib/groupCache";
-import { digits, labelFor, sameUser, userPart } from "@/lib/identity";
+import type { ParsedMessage } from "@/lib/message/parseMessage";
+import { patchGroupMetadata } from "@/lib/group/groupCache";
+import { digits, labelFor, sameUser, userPart } from "@/lib/message/identity";
 
 export type MemberAction = "add" | "remove" | "promote" | "demote";
 
@@ -17,7 +17,7 @@ export interface Target {
 
 type ParticipantResult = { status: string; jid: string | undefined };
 
-export const NO_TARGET =
+const NO_TARGET =
   "🚩 Mention someone, reply to their message, or pass a phone number.";
 
 /** WhatsApp answers each participant with a numeric status string. */

@@ -1,9 +1,11 @@
 import type { WASocket } from "@whiskeysockets/baileys";
-import type { ParsedMessage } from "@/lib/parseMessage";
-import type { SettingsStore } from "@/lib/settings";
+import type { ParsedMessage } from "@/lib/message/parseMessage";
+import type { SettingsStore } from "@/lib/group/settings";
 
+// Group invites and share links: chat.whatsapp.com/<code>, wa.me/<number>,
+// api.whatsapp.com/send?phone=<number>, wa.me/settings/<name>.
 const WHATSAPP_GROUP_LINK =
-  /(?:https?:\/\/)?(?:chat\.whatsapp\.com\/(?:invite\/)?|wa\.me\/settings\/[a-zA-Z0-9_-]+)[a-zA-Z0-9_-]+/i;
+  /(?:https?:\/\/)?(?:chat\.whatsapp\.com\/(?:invite\/)?[\w-]+|wa\.me\/\d{6,}|api\.whatsapp\.com\/send\?\S*phone=\d+|wa\.me\/settings\/[\w-]+)/i;
 
 export function containsGroupLink(text: string): boolean {
   return WHATSAPP_GROUP_LINK.test(text);
@@ -29,16 +31,24 @@ export async function handleAntilink(
     if (msg.isBotAdmin) {
       await sock.sendMessage(msg.chatJid, { delete: msg.key }).catch(() => {});
     }
-    await sock.sendMessage(msg.chatJid, {
-      text: "🚩 Link detected. Links are not allowed in this group.",
-    }).catch(() => {});
+    await sock
+      .sendMessage(msg.chatJid, {
+        text: "🚩 Link detected. Links are not allowed in this group.",
+      })
+      .catch(() => {});
     return true;
   }
 
   if (mode === "warn") {
-    await sock.sendMessage(msg.chatJid, {
-      text: "🚩 Warning: Do not share group links here.",
-    }, { quoted: msg.raw }).catch(() => {});
+    await sock
+      .sendMessage(
+        msg.chatJid,
+        {
+          text: "🚩 Warning: Do not share group links here.",
+        },
+        { quoted: msg.raw },
+      )
+      .catch(() => {});
     return false;
   }
 

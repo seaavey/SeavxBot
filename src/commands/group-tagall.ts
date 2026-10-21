@@ -1,5 +1,5 @@
-import type { Command } from "@/lib/types";
-import { isBot, userPart } from "@/lib/identity";
+import type { Command } from "@/lib/core/types";
+import { isBot, userPart } from "@/lib/message/identity";
 
 export const tagAllCommand: Command = {
   name: "tagall",

@@ -1,8 +1,8 @@
-import type { Command } from "@/lib/types";
-import { getUsers } from "@/lib/db";
-import { isPhoneJid, labelFor, userPart } from "@/lib/identity";
-import { isPremium } from "@/lib/users";
-import { roleLabel, stamp } from "@/lib/profile";
+import type { Command } from "@/lib/core/types";
+import { getUsers } from "@/lib/core/db";
+import { isPhoneJid, labelFor, userPart } from "@/lib/message/identity";
+import { isPremium } from "@/lib/user/users";
+import { roleLabel, stamp } from "@/lib/user/profile";
 
 const LIMIT = 20;
 
@@ -32,9 +32,10 @@ export const listUserCommand: Command = {
     });
 
     await reply({
-      text: [`*Users* (${store.count()} total, newest first)`, ...lines].join(
-        "\n",
-      ),
+      text: [
+        `*Users* (${store.count()} total, most recently active first)`,
+        ...lines,
+      ].join("\n"),
       ...(mentions.length > 0 ? { mentions } : {}),
     });
   },

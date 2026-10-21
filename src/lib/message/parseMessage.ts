@@ -3,6 +3,7 @@ import {
   type WASocket,
   type GroupMetadata,
   type proto,
+  getContentType,
   getDevice,
   isPnUser,
   isLidUser,
@@ -13,8 +14,8 @@ import {
   unwrapMessageContent,
   extractMessageBody,
   extractCommand,
-} from "@/lib/messageContent";
-import { resolvePermissions } from "@/lib/permissions";
+} from "@/lib/message/messageContent";
+import { resolvePermissions } from "@/lib/message/permissions";
 
 export interface QuotedMessage {
   key: proto.IMessageKey;
@@ -108,7 +109,7 @@ export async function parseMessage(
 
   // 2. Extract content & body
   const content = unwrapMessageContent(msg.message);
-  const type = content ? Object.keys(content)[0] || "" : "";
+  const type = getContentType(content) ?? "";
   const body = extractMessageBody(content);
 
   // 3. Extract command and args
@@ -127,7 +128,7 @@ export async function parseMessage(
   let quoted: QuotedMessage | undefined;
   if (contextInfo?.quotedMessage && contextInfo.stanzaId) {
     const quotedContent = unwrapMessageContent(contextInfo.quotedMessage);
-    const quotedType = quotedContent ? Object.keys(quotedContent)[0] || "" : "";
+    const quotedType = getContentType(quotedContent) ?? "";
     const quotedBody = extractMessageBody(quotedContent);
 
     quoted = {

@@ -1,7 +1,7 @@
-import type { Command } from "@/lib/types";
-import { getUsers } from "@/lib/db";
-import { labelFor } from "@/lib/identity";
-import { profileBody } from "@/lib/profile";
+import type { Command } from "@/lib/core/types";
+import { getUsers } from "@/lib/core/db";
+import { labelFor } from "@/lib/message/identity";
+import { profileBody } from "@/lib/user/profile";
 
 export const profileCommand: Command = {
   name: "profile",

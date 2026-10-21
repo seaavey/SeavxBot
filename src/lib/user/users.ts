@@ -23,18 +23,6 @@ export interface User {
   lastSeenAt: number;
 }
 
-export interface UserStore {
-  touch(identity: UserIdentity, isCommand: boolean): void;
-  ensure(identity: UserIdentity): void;
-  ensureMany(identities: UserIdentity[]): void;
-  get(jid: string): User | null;
-  list(limit: number): User[];
-  count(): number;
-  grantPremium(jid: string, until: number | null, grantedBy: string): User;
-  ensurePremium(jid: string, grantedBy: string): User;
-  revokePremium(jid: string): User | null;
-}
-
 /** Lives here so the schema bootstrap in db.ts and the tests cannot drift. */
 export const USERS_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS users (
@@ -94,7 +82,7 @@ const toUser = (row: UserRow): User => ({
   lastSeenAt: row.last_seen_at,
 });
 
-export function createUserStore(db: Database): UserStore {
+export function createUserStore(db: Database) {
   const selectJid = db.query<UserRow, [string]>(
     "SELECT * FROM users WHERE jid = ?",
   );
@@ -135,20 +123,14 @@ export function createUserStore(db: Database): UserStore {
        premium_granted_by = ?
      WHERE id = ?`,
   );
-  const revoke = db.query<unknown, [number]>(
-    `UPDATE users SET
+  const CLEAR_PREMIUM = `UPDATE users SET
        role = 'free',
        premium_until = NULL,
        premium_since = NULL,
-       premium_granted_by = NULL
-     WHERE id = ?`,
-  );
+       premium_granted_by = NULL`;
+  const revoke = db.query<unknown, [number]>(`${CLEAR_PREMIUM} WHERE id = ?`);
   const demoteExpired = db.query<unknown, [number]>(
-    `UPDATE users SET
-       role = 'free',
-       premium_until = NULL,
-       premium_since = NULL,
-       premium_granted_by = NULL
+    `${CLEAR_PREMIUM}
      WHERE role = 'premium' AND premium_until IS NOT NULL AND premium_until <= ?`,
   );
   const listRecent = db.query<UserRow, [number]>(
@@ -183,22 +165,29 @@ export function createUserStore(db: Database): UserStore {
     return toUser(row);
   }
 
+  // A sender JID falls back to the chat JID when WhatsApp omits the
+  // participant; a group must never become a user row.
+  const isGroupJid = (jid: string): boolean => jid.endsWith("@g.us");
+
+  /** The row for either identity, so one person never becomes two records. */
+  function rowFor(identity: UserIdentity, lid: string | null): UserRow | null {
+    return selectJid.get(identity.jid) ?? (lid ? selectLid.get(lid) : null);
+  }
+
   function ensure(identity: UserIdentity): void {
-    // A sender JID falls back to the chat JID when WhatsApp omits the
-    // participant; a group must never become a user row.
-    if (identity.jid.endsWith("@g.us")) return;
+    if (isGroupJid(identity.jid)) return;
 
     const lid = identity.lid || null;
     const name = identity.name || null;
     const now = Date.now();
-    const seen =
-      selectJid.get(identity.jid) ?? (lid ? selectLid.get(lid) : null);
+    const seen = rowFor(identity, lid);
 
     if (!seen) {
       insert.run(identity.jid, lid, name, 0, 0, now, now);
       return;
     }
 
+    // A LID-first row adopts the PN the first time WhatsApp exposes it.
     if (seen.jid !== identity.jid) adoptJid.run(identity.jid, seen.id);
     setIdentity.run(lid, name, seen.id);
   }
@@ -211,17 +200,12 @@ export function createUserStore(db: Database): UserStore {
   }
 
   function touch(identity: UserIdentity, isCommand: boolean): void {
-    // A sender JID falls back to the chat JID when WhatsApp omits the
-    // participant; a group must never become a user row.
-    if (identity.jid.endsWith("@g.us")) return;
+    if (isGroupJid(identity.jid)) return;
 
     const now = Date.now();
     const lid = identity.lid || null;
     const name = identity.name || null;
-    // A LID-first row adopts the PN the first time WhatsApp exposes it, so one
-    // person never splits into two rows with two sets of counters.
-    const seen =
-      selectJid.get(identity.jid) ?? (lid ? selectLid.get(lid) : null);
+    const seen = rowFor(identity, lid);
 
     if (!seen) {
       insert.run(identity.jid, lid, name, 1, isCommand ? 1 : 0, now, now);
@@ -303,3 +287,6 @@ export function createUserStore(db: Database): UserStore {
     revokePremium,
   };
 }
+
+/** The store the factory returns; no separate interface to keep in sync. */
+export type UserStore = ReturnType<typeof createUserStore>;

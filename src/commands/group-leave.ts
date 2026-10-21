@@ -1,5 +1,5 @@
-import type { Command } from "@/lib/types";
-import { describeError } from "@/lib/group";
+import type { Command } from "@/lib/core/types";
+import { describeError } from "@/lib/group/ops";
 
 export const leaveCommand: Command = {
   name: "leave",

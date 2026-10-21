@@ -4,19 +4,19 @@ import type {
   WAMessage,
   WASocket,
 } from "@whiskeysockets/baileys";
-import { parseMessage, type ParsedMessage } from "@/lib/parseMessage";
-import { logToFile } from "@/lib/logger";
+import { parseMessage, type ParsedMessage } from "@/lib/message/parseMessage";
+import { logToFile } from "@/lib/core/logger";
 import {
   guardMessages,
   ownerNumbers,
   prefixes,
   readMessages,
-} from "@/lib/config";
-import { getCommand } from "@/lib/commandLoader";
-import { getGroupSettings, getUsers } from "@/lib/db";
-import { handleAntilink } from "@/lib/antilink";
-import { mentionPhones } from "@/lib/mentions";
-import type { Command } from "@/lib/types";
+} from "@/lib/core/config";
+import { getCommand } from "@/lib/core/commandLoader";
+import { getGroupSettings, getUsers } from "@/lib/core/db";
+import { handleAntilink } from "@/lib/group/antilink";
+import { mentionPhones } from "@/lib/message/mentions";
+import type { Command } from "@/lib/core/types";
 
 /**
  * Replies to the message that triggered the command. Phone numbers in a text
@@ -33,7 +33,7 @@ function createReply(sock: WASocket, msg: ParsedMessage) {
       typeof content === "string" ? mentionPhones(content) : content,
       { quoted: msg.raw, ...options },
     );
-    logToFile("SENT_REPLY", res);
+    logToFile("SENT_REPLY", { id: res?.key?.id, chatJid: msg.chatJid });
     return res;
   };
 }
@@ -59,12 +59,12 @@ function denyReason(cmd: Command, msg: ParsedMessage): string | undefined {
   return undefined;
 }
 
+/** One console line per message: metadata only, never the text itself. */
 function describeIncoming(msg: ParsedMessage): string {
   const cmd = msg.isCmd ? msg.command : "-";
   return (
     `[${msg.chatJid}] ${msg.pushName} (${msg.type}) [Cmd: ${cmd}] ` +
-    `[Owner: ${msg.isOwner}, Admin: ${msg.isAdmin}, BotAdmin: ${msg.isBotAdmin}]: ` +
-    msg.body
+    `[Owner: ${msg.isOwner}, Admin: ${msg.isAdmin}, BotAdmin: ${msg.isBotAdmin}]`
   );
 }
 
@@ -76,15 +76,11 @@ export async function handleMessage(
   sock: WASocket,
   raw: WAMessage,
 ): Promise<void> {
-  logToFile("RAW_UPSERT", raw);
-
   // Own messages (linked devices, peer-data echoes) never dispatch.
   if (raw.key?.fromMe) return;
 
   const msg = await parseMessage(sock, raw, { prefixes, ownerNumbers });
   if (!msg) return;
-
-  logToFile("PARSED_MSG", msg);
 
   if (readMessages) {
     await sock.readMessages([msg.key]);

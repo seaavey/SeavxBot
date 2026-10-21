@@ -1,5 +1,5 @@
-import type { Command } from "@/lib/types";
-import { runSettingOp } from "@/lib/group";
+import type { Command } from "@/lib/core/types";
+import { runSettingOp } from "@/lib/group/ops";
 
 export const unlockCommand: Command = {
   name: "unlock",
@@ -9,9 +9,7 @@ export const unlockCommand: Command = {
   botAdminOnly: true,
   run: async ({ sock, msg, reply }) => {
     if (msg.groupMetadata?.restrict === false) {
-      await reply(
-        "🚩 Group info is already unlocked — everyone can edit it.",
-      );
+      await reply("🚩 Group info is already unlocked — everyone can edit it.");
       return;
     }
 

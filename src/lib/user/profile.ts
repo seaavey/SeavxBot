@@ -1,5 +1,5 @@
-import type { ParsedMessage } from "@/lib/parseMessage";
-import { isPremium, type User } from "@/lib/users";
+import type { ParsedMessage } from "@/lib/message/parseMessage";
+import { isPremium, type User } from "@/lib/user/users";
 
 /** A local `YYYY-MM-DD HH:MM:SS` stamp — never a bare date. */
 export const stamp = (ms: number): string => {

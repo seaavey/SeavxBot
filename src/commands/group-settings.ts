@@ -1,11 +1,11 @@
-import type { Command } from "@/lib/types";
-import { getGroupSettings } from "@/lib/db";
-import { settingsDefaults } from "@/lib/config";
+import type { Command } from "@/lib/core/types";
+import { getGroupSettings } from "@/lib/core/db";
+import { settingsDefaults } from "@/lib/core/config";
 import {
   ANTILINK_MODES,
   type AntilinkMode,
   type GroupSettings,
-} from "@/lib/settings";
+} from "@/lib/group/settings";
 
 const MAX_TEXT = 500;
 

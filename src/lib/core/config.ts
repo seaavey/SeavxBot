@@ -1,56 +1,30 @@
 /**
  * The single reader of the environment: `config.toml` and `SEAVXBOT_DB_PATH`
  * are read here and nowhere else. Every other module imports the resolved
- * values below, never the raw object.
+ * values below, never the raw object. The shape and its validation live in
+ * `configSchema.ts`, which has no file access and is therefore testable.
  */
-interface BotConfig {
-  bot_name: string;
-  prefixes: string[];
-  owners: string[];
-  auth: {
-    dir: string;
-    default_method?: string;
-    phone_number?: string;
-  };
-  logging: {
-    level: "fatal" | "error" | "warn" | "info" | "debug" | "trace";
-  };
-  storage?: {
-    path?: string;
-  };
-  features?: {
-    read_message?: boolean;
-  };
-  messages?: {
-    owner_only?: string;
-    admin_only?: string;
-    group_only?: string;
-    bot_admin_only?: string;
-    error?: string;
-    welcome_text?: string;
-    goodbye_text?: string;
-  };
-}
+import { parseConfig } from "@/lib/core/configSchema";
 
 let raw: unknown;
 try {
-  raw = (await import("../../config.toml")).default;
+  raw = (await import("../../../config.toml")).default;
 } catch {
   throw new Error(
     "Missing config.toml — copy config.example.toml to config.toml and set your owner numbers.",
   );
 }
 
-const cfg = raw as BotConfig;
+const cfg = parseConfig(raw);
 
 export const botName = cfg.bot_name;
 export const prefixes = cfg.prefixes;
 export const ownerNumbers = cfg.owners;
-export const logLevel = cfg.logging.level || "warn";
+export const logLevel = cfg.logging.level;
 export const readMessages = Boolean(cfg.features?.read_message);
 
 export const authOptions = {
-  dir: cfg.auth.dir || "auth_info",
+  dir: cfg.auth.dir,
   defaultMethod: cfg.auth.default_method,
   phoneNumber: cfg.auth.phone_number,
 };

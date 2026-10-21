@@ -1,9 +1,11 @@
-import { findMediaSource, downloadMedia } from "@/lib/mediaSource";
-import { webpToMp4 } from "@/lib/ffmpeg";
-import { isAnimatedWebp } from "@/lib/webp";
-import type { Command } from "@/lib/types";
-
-const MAX_BYTES = 15 * 1024 * 1024;
+import {
+  downloadMedia,
+  findMediaSource,
+  MAX_MEDIA_BYTES,
+} from "@/lib/media/mediaSource";
+import { webpToMp4 } from "@/lib/media/ffmpeg";
+import { isAnimatedWebp } from "@/lib/media/webp";
+import type { Command } from "@/lib/core/types";
 
 export const toMp4Command: Command = {
   name: "tomp4",
@@ -20,7 +22,7 @@ export const toMp4Command: Command = {
       await fail("🚩 Reply to an animated sticker or video.");
       return;
     }
-    if (source.fileLength && source.fileLength > MAX_BYTES) {
+    if (source.fileLength && source.fileLength > MAX_MEDIA_BYTES) {
       await fail("🚩 Media is too large (max 15MB).");
       return;
     }
@@ -28,7 +30,7 @@ export const toMp4Command: Command = {
     await react("⏳");
     try {
       const buffer = await downloadMedia(source.message);
-      if (buffer.length > MAX_BYTES) {
+      if (buffer.length > MAX_MEDIA_BYTES) {
         await fail("🚩 Media is too large (max 15MB).");
         return;
       }

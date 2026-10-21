@@ -1,6 +1,6 @@
-import type { Command } from "@/lib/types";
-import { findImageSource, toDataUrl } from "@/lib/imageSource";
-import { upscale } from "@/scrapers/upscale";
+import type { Command } from "@/lib/core/types";
+import { findImageSource, toDataUrl } from "@/lib/media/imageSource";
+import { upscale } from "@/scrapers/iloveimg";
 
 export const upscaleCommand: Command = {
   name: "upscale",

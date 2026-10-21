@@ -1,22 +1,18 @@
-import type { proto } from "@whiskeysockets/baileys";
+import {
+  extractMessageContent,
+  normalizeMessageContent,
+  type proto,
+} from "@whiskeysockets/baileys";
 
+/**
+ * The innermost content of a message. Baileys owns the wrapper rules
+ * (ephemeral, view-once, edited, device-sent, document-with-caption), so this
+ * only composes its two passes instead of keeping a second list of wrappers.
+ */
 export function unwrapMessageContent(
   msgContent: proto.IMessage | null | undefined,
 ): proto.IMessage | undefined {
-  if (!msgContent) return undefined;
-  let content: proto.IMessage | undefined = msgContent;
-
-  if (content.ephemeralMessage?.message) {
-    content = content.ephemeralMessage.message;
-  }
-  if (content.viewOnceMessage?.message) {
-    content = content.viewOnceMessage.message;
-  }
-  if (content.viewOnceMessageV2?.message) {
-    content = content.viewOnceMessageV2.message;
-  }
-
-  return content;
+  return extractMessageContent(normalizeMessageContent(msgContent));
 }
 
 export function extractMessageBody(

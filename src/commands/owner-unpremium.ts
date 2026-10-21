@@ -1,7 +1,7 @@
-import type { Command } from "@/lib/types";
-import { getUsers } from "@/lib/db";
-import { resolveTargets } from "@/lib/group";
-import { labelFor } from "@/lib/identity";
+import type { Command } from "@/lib/core/types";
+import { getUsers } from "@/lib/core/db";
+import { resolveTargets } from "@/lib/group/ops";
+import { labelFor } from "@/lib/message/identity";
 
 export const unpremiumCommand: Command = {
   name: "unpremium",

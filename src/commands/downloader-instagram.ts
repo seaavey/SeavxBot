@@ -1,5 +1,5 @@
-import type { Command } from "@/lib/types";
-import { mediaMessages } from "@/lib/mediaMessages";
+import type { Command } from "@/lib/core/types";
+import { mediaMessages } from "@/lib/media/mediaMessages";
 import { instagram, instagramPattern } from "@/scrapers/instagram";
 
 export const instagramCommand: Command = {

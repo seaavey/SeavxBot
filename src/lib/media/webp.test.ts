@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isAnimatedWebp } from "@/lib/webp";
+import { isAnimatedWebp } from "@/lib/media/webp";
 
 const webp = (chunk: string, flags: number): Buffer =>
   Buffer.concat([

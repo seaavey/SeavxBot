@@ -3,8 +3,8 @@ import {
   type GroupMetadata,
   jidNormalizedUser,
 } from "@whiskeysockets/baileys";
-import { getGroupMetadata } from "@/lib/groupCache";
-import { sameUser } from "@/lib/identity";
+import { getGroupMetadata } from "@/lib/group/groupCache";
+import { sameUser } from "@/lib/message/identity";
 
 export interface ResolvedPermissions {
   isOwner: boolean;

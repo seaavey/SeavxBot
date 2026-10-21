@@ -1,6 +1,6 @@
-import type { Command } from "@/lib/types";
-import { commands } from "@/lib/commandLoader";
-import { botName, prefixes } from "@/lib/config";
+import type { Command } from "@/lib/core/types";
+import { commands } from "@/lib/core/commandLoader";
+import { botName, prefixes } from "@/lib/core/config";
 
 export const menuCommand: Command = {
   name: "menu",

@@ -1,8 +1,10 @@
-import { findMediaSource, downloadMedia } from "@/lib/mediaSource";
-import { toImage } from "@/lib/ffmpeg";
-import type { Command } from "@/lib/types";
-
-const MAX_BYTES = 15 * 1024 * 1024;
+import {
+  downloadMedia,
+  findMediaSource,
+  MAX_MEDIA_BYTES,
+} from "@/lib/media/mediaSource";
+import { toImage } from "@/lib/media/ffmpeg";
+import type { Command } from "@/lib/core/types";
 
 export const toImageCommand: Command = {
   name: "toimage",
@@ -19,7 +21,7 @@ export const toImageCommand: Command = {
       await fail("🚩 Reply to a sticker.");
       return;
     }
-    if (source.fileLength && source.fileLength > MAX_BYTES) {
+    if (source.fileLength && source.fileLength > MAX_MEDIA_BYTES) {
       await fail("🚩 Media is too large (max 15MB).");
       return;
     }
@@ -27,7 +29,7 @@ export const toImageCommand: Command = {
     await react("⏳");
     try {
       const buffer = await downloadMedia(source.message);
-      if (buffer.length > MAX_BYTES) {
+      if (buffer.length > MAX_MEDIA_BYTES) {
         await fail("🚩 Media is too large (max 15MB).");
         return;
       }

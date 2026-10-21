@@ -1,5 +1,5 @@
-import type { Command } from "@/lib/types";
-import { runSettingOp } from "@/lib/group";
+import type { Command } from "@/lib/core/types";
+import { runSettingOp } from "@/lib/group/ops";
 
 export const lockCommand: Command = {
   name: "lock",
@@ -9,9 +9,7 @@ export const lockCommand: Command = {
   botAdminOnly: true,
   run: async ({ sock, msg, reply }) => {
     if (msg.groupMetadata?.restrict === true) {
-      await reply(
-        "🚩 Group info is already locked — only admins can edit it.",
-      );
+      await reply("🚩 Group info is already locked — only admins can edit it.");
       return;
     }
 
