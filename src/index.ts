@@ -6,7 +6,9 @@ import {
   fetchLatestBaileysVersion,
   isJidStatusBroadcast,
   isJidNewsletter,
+  DEFAULT_CONNECTION_CONFIG,
   type CacheStore,
+  type WAVersion,
   type WASocket,
 } from "@whiskeysockets/baileys";
 import type { Boom } from "@hapi/boom";
@@ -32,6 +34,7 @@ const PAIRING_CODE_DELAY_MS = 3000;
 const PHONE_PROMPT = "Phone number (e.g. 628xxx): ";
 const RECONNECT_BASE_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
+const VERSION_FETCH_TIMEOUT_MS = 5_000;
 
 /** Backoff state, reset every time the connection opens. */
 let reconnectAttempt = 0;
@@ -100,9 +103,26 @@ async function renderQR(QR: string): Promise<void> {
   }
 }
 
+/** raw.githubusercontent.com can stall for minutes on a cold link, and the
+ *  handshake never needs it: Baileys ships a version WhatsApp accepts. */
+async function resolveWaVersion(): Promise<{
+  version: WAVersion;
+  isLatest: boolean;
+}> {
+  const fallback = {
+    version: DEFAULT_CONNECTION_CONFIG.version,
+    isLatest: false,
+  };
+  return Promise.race([
+    // A rejection that lands after the fallback won must not go unhandled.
+    fetchLatestBaileysVersion().catch(() => fallback),
+    Bun.sleep(VERSION_FETCH_TIMEOUT_MS).then(() => fallback),
+  ]);
+}
+
 async function connect(): Promise<void> {
   const { state, saveCreds } = await useMultiFileAuthState(authOptions.dir);
-  const { version, isLatest } = await fetchLatestBaileysVersion();
+  const { version, isLatest } = await resolveWaVersion();
   console.log(`Using WA v${version.join(".")}, isLatest: ${isLatest}`);
 
   const isRegistered = Boolean(state.creds.registered || state.creds.me?.id);
@@ -152,12 +172,19 @@ async function connect(): Promise<void> {
 
     const statusCode = (lastDisconnect?.error as Boom | undefined)?.output
       ?.statusCode;
-    // 401 logged out, 403 forbidden and 440 replaced mean the creds are gone or
-    // another session owns them: reconnecting only fights the other end.
+    // 440 is another instance holding the same creds, not a dead session:
+    // telling the owner to remove auth_info there would force a re-pair.
+    if (statusCode === DisconnectReason.connectionReplaced) {
+      console.log(
+        "Connection closed (440): another instance is using this session. Stop it and restart.",
+      );
+      return;
+    }
+    // 401 logged out and 403 forbidden mean the creds are gone: reconnecting
+    // only fights the other end.
     const terminal =
       statusCode === DisconnectReason.loggedOut ||
-      statusCode === DisconnectReason.forbidden ||
-      statusCode === DisconnectReason.connectionReplaced;
+      statusCode === DisconnectReason.forbidden;
 
     if (terminal) {
       console.log(
