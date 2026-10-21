@@ -2,6 +2,10 @@
 
 WhatsApp bot on Bun + TypeScript + Baileys (`@whiskeysockets/baileys`). `src/index.ts` owns the socket lifecycle only; `src/lib/message/dispatch.ts` runs the per-message pipeline (parse → antilink → user tracking → guards → command). Commands are one file per command, auto-loaded from `src/commands/`; settings come from `config.toml`, per-group state from SQLite via `bun:sqlite`.
 
+## Feature workflow
+
+A feature follows: spec → owner verdict (approve / revise / reject) → plan → owner verdict → one subagent per task → ledger + signatures. Artifacts live in `.superpowers/` (gitignored): `specs/YYYY-MM-DD-<topic>-design.md`, `plans/YYYY-MM-DD-<feature>.md`, `sdd/<plan>/progress.md`, `ttd/<slug>/<role>/SIGNATURE.md`. Each verdict is asked with the clarify tool (`Approve` / `Revise` / `Reject`; a revise or reject must state why). No code before the spec is approved, no dispatch before the plan is approved. Full gates and the signature template: `seavxbot` skill, `references/feature-workflow.md`.
+
 ## Setup
 
     bun install
