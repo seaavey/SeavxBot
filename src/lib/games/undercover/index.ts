@@ -1279,6 +1279,10 @@ export function createUndercover(deps: GameDeps = {}) {
       }
 
       for (const row of rows) {
+        // A reopen is not a restart: a game still in memory keeps playing, and
+        // its row is what makes the next real restart able to warn the group.
+        if (sessions.has(row.groupJid)) continue;
+
         try {
           store().drop(row.groupJid);
         } catch (err) {

@@ -932,4 +932,15 @@ describe("terminal states", () => {
     expect(h.lastGroup("bot restarted")?.text).toBeDefined();
     expect(h.store.listLive()).toHaveLength(0);
   });
+
+  test("recovery leaves a game still live in this process alone", async () => {
+    const h = harness();
+    const [player] = roster(1);
+    await h.game.handle(h.input(player!, "join"));
+
+    await h.game.recover();
+
+    expect(h.lastGroup("bot restarted")).toBeUndefined();
+    expect(h.store.listLive()).toHaveLength(1);
+  });
 });
