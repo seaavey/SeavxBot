@@ -29,6 +29,7 @@ import { getGroupSettings, getUsers } from "@/lib/core/db";
 import { handleParticipantsUpdate } from "@/lib/group/greeting";
 import { syncGroupUsers } from "@/lib/group/userSync";
 import { digits, isBot } from "@/lib/message/identity";
+import { undercover } from "@/lib/games/undercover";
 
 const PAIRING_CODE_DELAY_MS = 3000;
 const PHONE_PROMPT = "Phone number (e.g. 628xxx): ";
@@ -146,6 +147,9 @@ async function connect(): Promise<void> {
     cachedGroupMetadata: (jid) => getGroupMetadata(sock, jid),
   });
 
+  // The engine sends on timers, long after the command that started a phase.
+  undercover.setSocket(sock);
+
   sock.ev.on("creds.update", saveCreds);
 
   if (pairingPhone) {
@@ -166,6 +170,9 @@ async function connect(): Promise<void> {
     if (connection === "open") {
       reconnectAttempt = 0;
       console.log("Connected to WhatsApp successfully!");
+      // A live game cannot survive a restart: close it instead of leaving the
+      // group waiting on a turn that will never come.
+      void undercover.recover();
       return;
     }
     if (connection !== "close") return;
@@ -214,6 +221,9 @@ async function connect(): Promise<void> {
 
     for (const raw of messages) {
       try {
+        // A poll vote is not a command: rc14 leaves the poll branch unhandled,
+        // so it has to be decrypted before the normal dispatch drops it.
+        if (await undercover.handlePollVote(sock, raw)) continue;
         await handleMessage(sock, raw);
       } catch (err) {
         console.error("Failed to handle message:", err);
@@ -236,6 +246,8 @@ async function connect(): Promise<void> {
   const forget = ({ id }: { id: string }) => invalidateGroupMetadata(id);
   sock.ev.on("group-participants.update", (update) => {
     forget(update);
+    // A departure is a game event: an absent player must not hold a turn.
+    void undercover.onParticipantsUpdate(update);
     // Joining an existing group arrives as an "add" of the bot itself. The
     // event only names the newcomers, so fetch the metadata and seed everyone.
     if (

@@ -18,7 +18,7 @@ A feature follows: spec → owner verdict (approve / revise / reject) → plan �
 
     bun start             # run the bot
     bun dev               # --watch; restarts the whole socket on save
-    bun run test          # bun test, 49 cases across 9 colocated *.test.ts files
+    bun run test          # bun test, 137 cases across 13 colocated *.test.ts files
     bun run typecheck     # bun check (Bun's checker, not tsc)
     bun run format        # prettier --write .
     bun run format:check  # what CI enforces
@@ -31,7 +31,7 @@ CI (`.github/workflows/ci.yml`) pins Bun 1.4.3 and runs `bun install --frozen-lo
 - `src/lib/message/dispatch.ts` — the inbound pipeline for one message.
 - `src/lib/core/config.ts` — the only reader of `config.toml` and `SEAVXBOT_DB_PATH`; exports resolved values, so other modules never touch a raw config object.
 - `src/commands/<category>-<name>.ts` — one command per file.
-- `src/lib/<domain>/` — one concept per file, grouped by domain: `core/` (config, db, logger, commandLoader, types), `message/` (dispatch, parseMessage, messageContent, permissions, identity, mentions), `media/` (mediaSource, imageSource, mediaMessages, ffmpeg, webp, extractUrl), `group/` (group, groupCache, greeting, userSync, antilink, settings), `user/` (users, profile).
+- `src/lib/<domain>/` — one concept per file, grouped by domain: `core/` (config, db, logger, commandLoader, types), `message/` (dispatch, parseMessage, messageContent, permissions, identity, mentions), `media/` (mediaSource, imageSource, mediaMessages, ffmpeg, webp, extractUrl), `group/` (group, groupCache, greeting, userSync, antilink, settings), `user/` (users, profile), `games/<name>/` (one folder per game, `index.ts` is the engine: `undercover/` has `index.ts`, `word.ts`, `rules.ts`, `store.ts`).
 - `src/scrapers/*.ts` — one module per platform; shared `getText`/`getJson` from `scrapers/http.ts` return `null` on failure instead of throwing.
 
 ## Adding a command
