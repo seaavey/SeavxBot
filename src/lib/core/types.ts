@@ -19,6 +19,8 @@ export interface CommandContext {
 export interface Command {
   name: string;
   description?: string;
+  /** Set by the loader from the filename prefix; the menu groups on it. */
+  category?: string;
   aliases?: string[];
   ownerOnly?: boolean;
   adminOnly?: boolean;

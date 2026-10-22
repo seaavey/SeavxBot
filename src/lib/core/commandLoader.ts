@@ -36,6 +36,9 @@ export async function loadCommands(
       continue;
     }
 
+    // The menu groups on this; the loader is the only place that sees the file.
+    cmd.category ??= path.parse(entry.name).name.split("-")[0];
+
     commands.set(cmd.name.toLowerCase(), cmd);
 
     if (Array.isArray(cmd.aliases)) {

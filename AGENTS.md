@@ -54,6 +54,7 @@ CI (`.github/workflows/ci.yml`) pins Bun 1.4.3 and runs `bun install --frozen-lo
     export default pingCommand;
 
 - The filename is irrelevant: `loadCommands()` keys on `name` (lowercased) plus `aliases`, skips `.test.`/`.spec.` files, and silently drops a module without `name` and a `run` function.
+- No `*.test.ts` inside `src/commands/`: command logic that needs a test lives in `src/lib/` with the test beside it.
 - Declare access with the flags and let `denyReason()` in `dispatch.ts` enforce them; do not re-check permissions inside `run`.
 - `reply()` quotes the trigger message and turns phone numbers in the text into @tags; pass an `AnyMessageContent` object for media. `react()` swallows failures by design.
 - A thrown error is logged, answered with `guardMessages.error`, and nothing else — a specific user-facing failure needs its own reply.
