@@ -30,6 +30,7 @@ import { handleParticipantsUpdate } from "@/lib/group/greeting";
 import { syncGroupUsers } from "@/lib/group/userSync";
 import { digits, isBot } from "@/lib/message/identity";
 import { undercover } from "@/lib/games/undercover";
+import { werewolf } from "@/lib/games/werewolf";
 
 const PAIRING_CODE_DELAY_MS = 3000;
 const PHONE_PROMPT = "Phone number (e.g. 628xxx): ";
@@ -149,6 +150,7 @@ async function connect(): Promise<void> {
 
   // The engine sends on timers, long after the command that started a phase.
   undercover.setSocket(sock);
+  werewolf.setSocket(sock);
 
   sock.ev.on("creds.update", saveCreds);
 
@@ -173,6 +175,7 @@ async function connect(): Promise<void> {
       // A live game cannot survive a restart: close it instead of leaving the
       // group waiting on a turn that will never come.
       void undercover.recover();
+      void werewolf.recover();
       return;
     }
     if (connection !== "close") return;
@@ -248,6 +251,7 @@ async function connect(): Promise<void> {
     forget(update);
     // A departure is a game event: an absent player must not hold a turn.
     void undercover.onParticipantsUpdate(update);
+    void werewolf.onParticipantsUpdate(update);
     // Joining an existing group arrives as an "add" of the bot itself. The
     // event only names the newcomers, so fetch the metadata and seed everyone.
     if (
