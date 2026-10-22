@@ -91,11 +91,6 @@ const FACTION_LABEL: Record<Faction, string> = {
   WEREWOLF: "Werewolf",
 };
 
-/** The one place a role becomes text. */
-function roleLabel(role: Role): string {
-  return role;
-}
-
 function noSession(prefix: string): string {
   return `🚩 No Werewolf game here. Start one with ${prefix}ww join.`;
 }
@@ -321,7 +316,7 @@ export function createWerewolf(deps: GameDeps = {}) {
 
     const head = [
       "🐺 WEREWOLF — ROLE",
-      `Your role: ${roleLabel(role)}`,
+      `Your role: ${role}`,
       `Faction: ${FACTION_LABEL[FACTION[role]]}`,
     ];
 
@@ -437,7 +432,7 @@ export function createWerewolf(deps: GameDeps = {}) {
     } else {
       for (const player of dead) {
         lines.push(
-          `${player.number}. ${player.name} died in the night. Role: ${roleLabel(player.role ?? "VILLAGER")}.`,
+          `${player.number}. ${player.name} died in the night. Role: ${player.role ?? "VILLAGER"}.`,
         );
       }
     }
@@ -487,7 +482,7 @@ export function createWerewolf(deps: GameDeps = {}) {
     return [
       `🚪 DAY ${round} — eliminated`,
       `${player.number}. ${player.name} was voted out.`,
-      `Role: ${roleLabel(player.role ?? "VILLAGER")}`,
+      `Role: ${player.role ?? "VILLAGER"}`,
       `Votes: ${votes}`,
     ].join("\n");
   }
@@ -531,7 +526,7 @@ export function createWerewolf(deps: GameDeps = {}) {
             ? deathNote(session, player)
             : "";
       lines.push(
-        `${player.number}. ${player.name} — ${roleLabel(player.role ?? "VILLAGER")}${how}`,
+        `${player.number}. ${player.name} — ${player.role ?? "VILLAGER"}${how}`,
       );
     }
 
@@ -557,7 +552,7 @@ export function createWerewolf(deps: GameDeps = {}) {
       "",
       ...session.players.map((player) => {
         if (player.status === "dead") {
-          return `${player.number}. ${player.name} — dead (${roleLabel(player.role ?? "VILLAGER")})`;
+          return `${player.number}. ${player.name} — dead (${player.role ?? "VILLAGER"})`;
         }
         if (player.status === "left") {
           return `${player.number}. ${player.name} — left`;
@@ -922,8 +917,8 @@ export function createWerewolf(deps: GameDeps = {}) {
     }
 
     const groupJid = session.groupJid;
-    setPhase(session, "ROLE_ASSIGNMENT");
     assignRoles(session.players, random);
+    setPhase(session, "ROLE_ASSIGNMENT");
     clearTimer(groupJid);
 
     for (const player of session.players) {
@@ -1239,7 +1234,7 @@ export function createWerewolf(deps: GameDeps = {}) {
         }
         await sendText(
           row.groupJid,
-          "🛑 The bot restarted, so this Werewolf game is closed. Build a new lobby with .ww join.",
+          "🛑 The bot restarted, so this Werewolf game is closed. Build a new lobby with the werewolf command.",
         );
       }
     },
