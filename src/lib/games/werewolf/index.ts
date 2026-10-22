@@ -419,9 +419,13 @@ export function createWerewolf(deps: GameDeps = {}) {
     return `✅ Target ${verb}: ${target.number}. ${target.name}.`;
   }
 
-  function seerResultText(target: Player, isWolf: boolean): string {
+  function seerResultText(
+    target: Player,
+    isWolf: boolean,
+    round: number,
+  ): string {
     return [
-      "🔮 NIGHT RESULT",
+      `🔮 NIGHT ${round} — RESULT`,
       `${target.number}. ${target.name} is ${isWolf ? "a WEREWOLF." : "not a WEREWOLF."}`,
     ].join("\n");
   }
@@ -475,9 +479,13 @@ export function createWerewolf(deps: GameDeps = {}) {
     return `✅ Vote recorded: ${target.number}. ${target.name}.`;
   }
 
-  function eliminatedText(player: Player, votes: number): string {
+  function eliminatedText(
+    player: Player,
+    votes: number,
+    round: number,
+  ): string {
     return [
-      `🚪 DAY — eliminated`,
+      `🚪 DAY ${round} — eliminated`,
       `${player.number}. ${player.name} was voted out.`,
       `Role: ${roleLabel(player.role ?? "VILLAGER")}`,
       `Votes: ${votes}`,
@@ -624,7 +632,9 @@ export function createWerewolf(deps: GameDeps = {}) {
       const isWolf = Boolean(
         target?.role && FACTION[target.role] === "WEREWOLF",
       );
-      if (target) await sendText(seerId, seerResultText(target, isWolf));
+      if (target) {
+        await sendText(seerId, seerResultText(target, isWolf, session.round));
+      }
     } else {
       const livingSeer = livingPlayers(session).find(
         (player) => player.role === "SEER",
@@ -748,7 +758,10 @@ export function createWerewolf(deps: GameDeps = {}) {
 
     session.tied = [];
     if (eliminated) {
-      await sendText(session.groupJid, eliminatedText(eliminated, votes));
+      await sendText(
+        session.groupJid,
+        eliminatedText(eliminated, votes, session.round),
+      );
     }
     await afterVote(session);
   }
