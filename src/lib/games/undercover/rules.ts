@@ -41,6 +41,8 @@ export interface Ballot {
 export interface Session {
   id: string;
   groupJid: string;
+  /** The prefix this lobby was built with; every hint quotes the caller's own. */
+  prefix: string;
   hostId: string;
   phase: Phase;
   round: number;

@@ -37,6 +37,7 @@ function withRoles(roles: Role[]): Session {
   return {
     id: "session",
     groupJid: "1@g.us",
+    prefix: ".",
     hostId: "1@s.whatsapp.net",
     phase: "CLUE_PHASE",
     round: 1,

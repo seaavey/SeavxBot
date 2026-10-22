@@ -77,21 +77,28 @@ export interface GameDeps {
 }
 
 const GROUP_ONLY = "🚩 Play this in the group, not in a DM.";
-const NO_SESSION = "🚩 No Undercover game here. Start one with .uc join.";
-const HELP = [
-  "🕵️ UNDERCOVER — how to play",
-  "",
-  ".uc join — create or join a lobby",
-  ".uc leave — leave a lobby before the start",
-  ".uc start — host/admin starts the game (5-12 players)",
-  ".uc status — round, players, whose turn",
-  ".uc clue <1-3 words> — your clue on your turn",
-  ".uc guess <word> — Mr. White, in DM, after elimination",
-  ".uc cancel — host/admin cancels the game",
-  "",
-  "Civilians share one word, Undercover players share another,",
-  "Mr. White has none. Vote out the odd ones out.",
-].join("\n");
+
+/** Prefixes come from config.toml, so every hint carries the caller's own. */
+function noSession(prefix: string): string {
+  return `🚩 No Undercover game here. Start one with ${prefix}uc join.`;
+}
+
+function helpText(prefix: string): string {
+  return [
+    "🕵️ UNDERCOVER — how to play",
+    "",
+    `${prefix}uc join — create or join a lobby`,
+    `${prefix}uc leave — leave a lobby before the start`,
+    `${prefix}uc start — host/admin starts the game (5-12 players)`,
+    `${prefix}uc status — round, players, whose turn`,
+    `${prefix}uc clue <1-3 words> — your clue on your turn`,
+    `${prefix}uc guess <word> — Mr. White, in DM, after elimination`,
+    `${prefix}uc cancel — host/admin cancels the game`,
+    "",
+    "Civilians share one word, Undercover players share another,",
+    "Mr. White has none. Vote out the odd ones out.",
+  ].join("\n");
+}
 
 const PHASE_LABEL: Record<Session["phase"], string> = {
   LOBBY: "lobby",
@@ -112,7 +119,6 @@ export function createUndercover(deps: GameDeps = {}) {
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
   const queues = new Map<string, Promise<unknown>>();
   let socket: WASocket | undefined;
-  let commandPrefix = ".";
 
   /** One message at a time per group: state never interleaves at an await. */
   function queued<T>(groupJid: string, task: () => Promise<T>): Promise<T> {
@@ -265,7 +271,7 @@ export function createUndercover(deps: GameDeps = {}) {
       "",
       ...session.players.map((player) => `${player.number}. ${player.name}`),
       "",
-      `${commandPrefix}uc join to join · ${commandPrefix}uc start to begin`,
+      `${session.prefix}uc join to join · ${session.prefix}uc start to begin`,
       `${MIN_PLAYERS}-${MAX_PLAYERS} players.`,
     ].join("\n");
   }
@@ -418,7 +424,7 @@ export function createUndercover(deps: GameDeps = {}) {
         `🗣️ Round ${session.round} — clue turn`,
         "",
         `${player.number}. ${player.name}, send your clue (max ${MAX_CLUE_WORDS} words):`,
-        `${commandPrefix}uc clue <words>`,
+        `${session.prefix}uc clue <words>`,
         "",
         `${CLUE_MS / 1000}s`,
       ].join("\n"),
@@ -650,7 +656,7 @@ export function createUndercover(deps: GameDeps = {}) {
       "",
       "You have one chance to name the Civilian word.",
       "",
-      `${commandPrefix}uc guess <word>`,
+      `${session.prefix}uc guess <word>`,
       "",
       `${GUESS_MS / 1000}s.`,
     ].join("\n");
@@ -860,6 +866,7 @@ export function createUndercover(deps: GameDeps = {}) {
       session = {
         id: randomBytes(8).toString("hex"),
         groupJid,
+        prefix: input.prefix || ".",
         hostId: "",
         phase: "LOBBY",
         round: 0,
@@ -931,7 +938,7 @@ export function createUndercover(deps: GameDeps = {}) {
 
   async function start(input: CommandInput): Promise<string | null> {
     const session = sessions.get(input.chatJid);
-    if (!session) return NO_SESSION;
+    if (!session) return noSession(input.prefix);
     if (session.phase !== "LOBBY") return "🚩 The game already started.";
 
     const actor = findPlayer(session, input.senderJid);
@@ -999,8 +1006,11 @@ export function createUndercover(deps: GameDeps = {}) {
     text: string,
   ): Promise<string | null> {
     const session = sessions.get(input.chatJid);
-    if (!session) return NO_SESSION;
+    if (!session) return noSession(input.prefix);
     if (session.phase !== "CLUE_PHASE") return "🚩 No clue turn is open.";
+    // The timer callback is what advances a turn; a clue that lands after the
+    // deadline but before the callback must not slip in.
+    if (now() > session.deadline) return "🚩 Time is up for this turn.";
 
     const player = findPlayer(session, input.senderJid);
     if (!player || player.status !== "active") {
@@ -1014,7 +1024,7 @@ export function createUndercover(deps: GameDeps = {}) {
 
     const words = clueTokens(text);
     if (words.length === 0) {
-      return `🚩 Send a clue: ${commandPrefix}uc clue <1-${MAX_CLUE_WORDS} words>.`;
+      return `🚩 Send a clue: ${input.prefix}uc clue <1-${MAX_CLUE_WORDS} words>.`;
     }
     if (words.length > MAX_CLUE_WORDS) {
       return `🚩 A clue is at most ${MAX_CLUE_WORDS} words.`;
@@ -1062,7 +1072,7 @@ export function createUndercover(deps: GameDeps = {}) {
     const trimmed = text.trim();
     const canonical = normalizeSecretWord(trimmed);
     if (!canonical) {
-      return `🚩 Send a guess: ${commandPrefix}uc guess <word>.`;
+      return `🚩 Send a guess: ${input.prefix}uc guess <word>.`;
     }
     if ([...trimmed].length > MAX_GUESS_CODE_POINTS) {
       return `🚩 A guess is at most ${MAX_GUESS_CODE_POINTS} characters.`;
@@ -1085,7 +1095,7 @@ export function createUndercover(deps: GameDeps = {}) {
 
   async function status(input: CommandInput): Promise<string> {
     const session = sessions.get(input.chatJid);
-    if (!session) return NO_SESSION;
+    if (!session) return noSession(input.prefix);
     return statusText(session);
   }
 
@@ -1098,13 +1108,13 @@ export function createUndercover(deps: GameDeps = {}) {
       "One group, one word for the Civilians, a different one for the",
       "Undercover, and Mr. White with no word at all.",
       "",
-      `${commandPrefix}uc join to start a lobby · ${commandPrefix}uc help for the rules`,
+      `${input.prefix}uc join to start a lobby · ${input.prefix}uc help for the rules`,
     ].join("\n");
   }
 
   async function cancel(input: CommandInput): Promise<string | null> {
     const session = sessions.get(input.chatJid);
-    if (!session) return NO_SESSION;
+    if (!session) return noSession(input.prefix);
 
     const actor = findPlayer(session, input.senderJid);
     const allowed =
@@ -1137,6 +1147,9 @@ export function createUndercover(deps: GameDeps = {}) {
       }
       persist(session);
       arm(session);
+      // The list changed: show it, or the group sees a roster that dropped
+      // someone without saying so.
+      await sendText(groupJid, lobbyText(session));
       return;
     }
 
@@ -1185,7 +1198,6 @@ export function createUndercover(deps: GameDeps = {}) {
   }
 
   async function handle(input: CommandInput): Promise<string | null> {
-    commandPrefix = input.prefix || commandPrefix;
     const [sub = "", ...rest] = input.args;
     const topic = sub.toLowerCase();
     const text = rest.join(" ");
@@ -1202,7 +1214,7 @@ export function createUndercover(deps: GameDeps = {}) {
       return queued(owner.groupJid, () => guess(owner.groupJid, input, text));
     }
 
-    if (topic === "help") return HELP;
+    if (topic === "help") return helpText(input.prefix);
     if (!input.isGroup) return GROUP_ONLY;
 
     if (topic === "") {
@@ -1217,7 +1229,7 @@ export function createUndercover(deps: GameDeps = {}) {
       topic !== "cancel" &&
       topic !== "clue"
     ) {
-      return `🚩 Unknown command: ${commandPrefix}uc ${sub}\n\n${HELP}`;
+      return `🚩 Unknown command: ${input.prefix}uc ${sub}\n\n${helpText(input.prefix)}`;
     }
 
     return queued(input.chatJid, async () => {

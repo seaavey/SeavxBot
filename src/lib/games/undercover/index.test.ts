@@ -317,6 +317,18 @@ describe("lobby", () => {
     expect(afterRejoin).toContain("2. P3");
   });
 
+  test("the lobby quotes the prefix the caller used", async () => {
+    const h = harness();
+    const [player] = roster(1);
+
+    const reply = await h.game.handle({
+      ...h.input(player!, "join"),
+      prefix: "!",
+    });
+
+    expect(reply).toContain("!uc join");
+  });
+
   test("a player cannot join a second group's lobby", async () => {
     const h = harness();
     const players = roster(2);
@@ -466,6 +478,16 @@ describe("clue phase", () => {
     advance(CLUE_MS - 1);
     expect(turnPlayer(players)!.jid).toBe(deadline);
     expect(await game.handle(input(onTurn, "clue", "zzz"))).toBeNull();
+  });
+
+  test("a clue after the deadline is refused", async () => {
+    const { game, input, players, turnPlayer, advance } = await started();
+    const onTurn = turnPlayer(players)!;
+
+    advance(CLUE_MS + 1);
+    const reply = await game.handle(input(onTurn, "clue", "zzz"));
+
+    expect(reply).toContain("Time is up");
   });
 
   test("a clue containing the sender's own word is rejected, then accepted", async () => {
@@ -807,6 +829,22 @@ describe("Mr. White", () => {
 });
 
 describe("departures", () => {
+  test("a lobby departure resends the roster", async () => {
+    const h = harness();
+    const players = roster(3);
+    for (const player of players) await h.game.handle(h.input(player, "join"));
+
+    await h.game.onParticipantsUpdate({
+      id: GROUP,
+      action: "remove",
+      participants: [{ id: players[1]!.lid } as never],
+    });
+
+    const lobby = h.lastGroup("Players: 2/12");
+    expect(lobby?.text).toContain("1. P1");
+    expect(lobby?.text).toContain("2. P3");
+  });
+
   test("the leaver's turn is skipped immediately", async () => {
     const h = await started();
     const onTurn = h.turnPlayer(h.players)!;
