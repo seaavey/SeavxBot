@@ -15,6 +15,7 @@ import {
 import { getCommand } from "@/lib/core/commandLoader";
 import { getGroupSettings, getUsers } from "@/lib/core/db";
 import { handleAntilink } from "@/lib/group/antilink";
+import { afkNotice, clearAfk } from "@/lib/group/afk";
 import { mentionPhones } from "@/lib/message/mentions";
 import type { Command } from "@/lib/core/types";
 
@@ -109,6 +110,14 @@ export async function handleMessage(
   } catch (err) {
     // Activity counts must never stop the command that was about to run.
     console.error("Failed to record user activity:", err);
+  }
+
+  try {
+    clearAfk(msg);
+    const notice = afkNotice(msg);
+    if (notice) await reply(notice);
+  } catch (err) {
+    console.error("AFK check failed:", err);
   }
 
   if (!cmd) return;
