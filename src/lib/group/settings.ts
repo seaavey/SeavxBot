@@ -8,6 +8,7 @@ export interface GroupSettings {
   goodbye: boolean;
   goodbye_text: string;
   antilink: AntilinkMode;
+  warn_limit: number;
 }
 
 /** The two values that come from config.toml instead of being fixed. */
@@ -34,11 +35,12 @@ export const ANTILINK_MODES: readonly AntilinkMode[] = [
 
 const DEFAULT_SETTINGS: Pick<
   GroupSettings,
-  "welcome" | "goodbye" | "antilink"
+  "welcome" | "goodbye" | "antilink" | "warn_limit"
 > = {
   welcome: false,
   goodbye: false,
   antilink: "off",
+  warn_limit: 3,
 };
 
 /**
@@ -52,6 +54,8 @@ const GUARDS: Record<keyof GroupSettings, (value: unknown) => boolean> = {
   goodbye: (value) => typeof value === "boolean",
   goodbye_text: (value) => typeof value === "string",
   antilink: (value) => ANTILINK_MODES.includes(value as AntilinkMode),
+  warn_limit: (value) =>
+    typeof value === "number" && Number.isInteger(value) && value > 0,
 };
 
 export function createSettingsStore(db: Database, defaults: SettingsDefaults) {

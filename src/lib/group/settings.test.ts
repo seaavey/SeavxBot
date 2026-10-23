@@ -23,6 +23,7 @@ describe("group settings store", () => {
       goodbye: false,
       goodbye_text: "bye {name}",
       antilink: "off",
+      warn_limit: 3,
     });
   });
 
