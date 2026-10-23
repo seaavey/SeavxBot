@@ -18,7 +18,7 @@ A feature follows: spec → owner verdict (approve / revise / reject) → plan �
 
     bun start             # run the bot
     bun dev               # --watch; restarts the whole socket on save
-    bun run test          # bun test, 239 cases across 20 colocated *.test.ts files
+    bun run test          # bun test, 242 cases across 21 colocated *.test.ts files
     bun run typecheck     # bun check (Bun's checker, not tsc)
     bun run format        # prettier --write .
     bun run format:check  # what CI enforces
