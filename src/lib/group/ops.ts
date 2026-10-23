@@ -101,7 +101,7 @@ export async function runSettingOp(
  * which is an internal id the user has never seen — resolve to `phoneNumber`
  * (PN) whenever the metadata carries it, and only fall back to the LID itself.
  */
-function pnFor(meta: GroupMetadata | undefined, jid: string): string {
+export function pnFor(meta: GroupMetadata | undefined, jid: string): string {
   const participant = meta?.participants.find((p) => sameUser(p.id, jid));
   return participant?.phoneNumber || jid;
 }
@@ -124,7 +124,9 @@ export async function resolveTargets(
   for (const jid of msg.mentions) add(jid);
 
   if (targets.size === 0 && msg.quoted?.senderJid) {
-    add(msg.quoted.senderJid);
+    // A quoted author can arrive with a `:device` suffix; a send target must
+    // be the bare user JID.
+    add(jidNormalizedUser(msg.quoted.senderJid));
   }
 
   const known = new Set([...targets.keys()].map(userPart));
