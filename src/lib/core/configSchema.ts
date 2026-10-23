@@ -37,6 +37,7 @@ export interface BotConfig {
     admin_only?: string;
     group_only?: string;
     bot_admin_only?: string;
+    premium_only?: string;
     error?: string;
     welcome_text?: string;
     goodbye_text?: string;

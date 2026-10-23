@@ -17,6 +17,7 @@ import { getGroupSettings, getUsers } from "@/lib/core/db";
 import { handleAntilink } from "@/lib/group/antilink";
 import { afkNotice, clearAfk } from "@/lib/group/afk";
 import { mentionPhones } from "@/lib/message/mentions";
+import { isPremium } from "@/lib/user/users";
 import type { Command } from "@/lib/core/types";
 
 /**
@@ -56,6 +57,10 @@ function denyReason(cmd: Command, msg: ParsedMessage): string | undefined {
     return guardMessages.adminOnly;
   }
   if (cmd.botAdminOnly && !msg.isBotAdmin) return guardMessages.botAdminOnly;
+  if (cmd.premiumOnly && !msg.isOwner) {
+    const user = getUsers().get(msg.senderJid);
+    if (!user || !isPremium(user)) return guardMessages.premiumOnly;
+  }
 
   return undefined;
 }

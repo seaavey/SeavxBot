@@ -41,6 +41,7 @@ admin_only = "🚩 Group admin privileges required."
 group_only = "🚩 This command can only be used in groups."
 bot_admin_only = "🚩 Bot requires admin privileges to perform this action."
 error = "🚩 An error occurred while executing the command."
+premium_only = "🚩 Premium access required."
 
 # Default greeting templates. A group can override these with
 # !settings welcometext / !settings goodbyetext.

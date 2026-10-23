@@ -40,6 +40,7 @@ export const guardMessages = {
   groupOnly: cfg.messages?.group_only || "🚩 Group chat required.",
   botAdminOnly:
     cfg.messages?.bot_admin_only || "🚩 Bot admin privileges required.",
+  premiumOnly: cfg.messages?.premium_only || "🚩 Premium access required.",
   error: cfg.messages?.error || "🚩 Command execution failed.",
 };
 

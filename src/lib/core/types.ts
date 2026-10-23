@@ -26,5 +26,6 @@ export interface Command {
   adminOnly?: boolean;
   groupOnly?: boolean;
   botAdminOnly?: boolean;
+  premiumOnly?: boolean;
   run: (ctx: CommandContext) => Promise<void> | void;
 }
