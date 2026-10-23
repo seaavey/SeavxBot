@@ -12,6 +12,10 @@ const logStream = fs.createWriteStream(LOG_FILE, { flags: "a" });
 
 /** Writes one labelled block. Callers own what they put in it. */
 export function logToFile(prefix: string, message: unknown): void {
+  // Bun sets NODE_ENV=test for `bun test`; a test run must not write synthetic
+  // ids into the live session log.
+  if (process.env.NODE_ENV === "test") return;
+
   const timestamp = new Date().toISOString();
   const content =
     typeof message === "string"
