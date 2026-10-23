@@ -105,7 +105,19 @@ export function afkNotice(msg: ParsedMessage): AfkNotice | undefined {
 
   const candidates = [...msg.mentions];
   if (msg.quoted?.senderJid) candidates.push(msg.quoted.senderJid);
-  if (candidates.length === 0) return;
+  if (candidates.length === 0) {
+    // A tag that carries no mentionedJid looks identical to plain chatter, so
+    // record it while the chat still holds an AFK row.
+    if (chats.has(msg.chatJid)) {
+      logToFile("AFK_QUIET", {
+        chatJid: msg.chatJid,
+        senderJid: msg.senderJid,
+        senderLid: msg.senderLid,
+        type: msg.type,
+      });
+    }
+    return;
+  }
 
   const seen = new Set<AfkEntry>();
   const lines: string[] = [];
