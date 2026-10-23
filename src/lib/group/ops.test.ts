@@ -15,6 +15,14 @@ describe("pnFor", () => {
   test("returns an unknown JID unchanged", () => {
     expect(pnFor(META, "628999@lid")).toBe("628999@lid");
   });
+
+  test("maps a LID to its phone JID when the metadata prefers the PN", () => {
+    const meta = {
+      participants: [{ id: "628123@s.whatsapp.net", lid: "999123@lid" }],
+    } as unknown as GroupMetadata;
+
+    expect(pnFor(meta, "999123@lid")).toBe("628123@s.whatsapp.net");
+  });
 });
 
 // onWhatsApp is never reached: the quoted author already fills the set.

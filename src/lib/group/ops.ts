@@ -6,7 +6,13 @@ import {
 import type { Boom } from "@hapi/boom";
 import type { ParsedMessage } from "@/lib/message/parseMessage";
 import { patchGroupMetadata } from "@/lib/group/groupCache";
-import { digits, labelFor, sameUser, userPart } from "@/lib/message/identity";
+import {
+  digits,
+  isPhoneJid,
+  labelFor,
+  sameUser,
+  userPart,
+} from "@/lib/message/identity";
 
 export type MemberAction = "add" | "remove" | "promote" | "demote";
 
@@ -102,8 +108,17 @@ export async function runSettingOp(
  * (PN) whenever the metadata carries it, and only fall back to the LID itself.
  */
 export function pnFor(meta: GroupMetadata | undefined, jid: string): string {
-  const participant = meta?.participants.find((p) => sameUser(p.id, jid));
-  return participant?.phoneNumber || jid;
+  // `id` is the preferred identity, so a PN-preferred participant keeps its
+  // phone JID in `id` and the LID in `lid` — matching `id` alone misses it.
+  const participant = meta?.participants.find(
+    (p) =>
+      sameUser(p.id, jid) ||
+      sameUser(p.lid, jid) ||
+      sameUser(p.phoneNumber, jid),
+  );
+  if (!participant) return jid;
+  if (participant.phoneNumber) return participant.phoneNumber;
+  return isPhoneJid(participant.id) ? participant.id : jid;
 }
 
 /**

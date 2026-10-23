@@ -191,6 +191,40 @@ describe("afk", () => {
     expect(notice?.text).toBe("💤 @628222 is AFK — lunch");
   });
 
+  test("a LID-only follow-up clears a PN-keyed entry", () => {
+    const chat = "asymmetric@g.us";
+    const meta = {
+      participants: [{ id: "628111@s.whatsapp.net", lid: "999111@lid" }],
+    } as unknown as GroupMetadata;
+
+    applyAfk(
+      msg({
+        chatJid: chat,
+        senderJid: "628111@s.whatsapp.net",
+        text: "away",
+        groupMetadata: meta,
+      }),
+    );
+    clearAfk(
+      msg({
+        chatJid: chat,
+        senderJid: "999111@lid",
+        senderLid: "999111@lid",
+        groupMetadata: meta,
+      }),
+    );
+
+    const notice = afkNotice(
+      msg({
+        chatJid: chat,
+        senderJid: "628999@s.whatsapp.net",
+        groupMetadata: meta,
+        mentions: ["628111@s.whatsapp.net"],
+      }),
+    );
+    expect(notice).toBeUndefined();
+  });
+
   test("skips a self-mention", () => {
     const chat = "self@g.us";
     applyAfk(msg({ chatJid: chat, text: "away" }));
