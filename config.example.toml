@@ -47,3 +47,8 @@ error = "🚩 An error occurred while executing the command."
 # Placeholders: {mention} {name} {group} {count}
 welcome_text = "Welcome {mention} to *{group}*! You are member #{count}."
 goodbye_text = "Goodbye {name}."
+
+# Default warn limit per group (.warn kicks at this count). Each group can
+# override it later; the store default is 3.
+[settings]
+warn_limit = 3
