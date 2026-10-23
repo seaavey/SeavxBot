@@ -263,9 +263,11 @@ async function connect(): Promise<void> {
       );
     }
     // Runs after the invalidation so the greeting reads fresh metadata.
-    void handleParticipantsUpdate(sock, getGroupSettings(), update).catch(
-      (err) => console.error("Greeting handler failed:", err),
-    );
+    void handleParticipantsUpdate(
+      sock,
+      getGroupSettings(update.id),
+      update,
+    ).catch((err) => console.error("Greeting handler failed:", err));
   });
   sock.ev.on("groups.update", (updates) => {
     for (const { id } of updates) if (id) invalidateGroupMetadata(id);

@@ -90,7 +90,11 @@ export async function handleMessage(
   console.log(describeIncoming(msg));
 
   try {
-    const shouldAbort = await handleAntilink(sock, msg, getGroupSettings());
+    const shouldAbort = await handleAntilink(
+      sock,
+      msg,
+      getGroupSettings(msg.chatJid),
+    );
     if (shouldAbort) return;
   } catch (err) {
     console.error("Antilink check failed:", err);

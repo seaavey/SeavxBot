@@ -57,7 +57,7 @@ export const settingsCommand: Command = {
   groupOnly: true,
   adminOnly: true,
   run: async ({ msg, reply }) => {
-    const store = getGroupSettings();
+    const store = getGroupSettings(msg.chatJid);
     const subject = msg.groupMetadata?.subject || "this group";
     const [sub = "", ...rest] = msg.args;
     const value = rest.join(" ").trim();

@@ -89,7 +89,7 @@ function getDb(): Database {
   return handle;
 }
 
-export function getGroupSettings(): SettingsStore {
+export function getGroupSettings(jid: string): SettingsStore {
   store ??= createSettingsStore(getDb(), settingsDefaults);
   return store;
 }
@@ -114,7 +114,7 @@ export function getWerewolf(): WerewolfStore {
   return werewolf;
 }
 
-export function getWarnings(): WarningsStore {
+export function getWarnings(jid: string): WarningsStore {
   warnings ??= createWarningsStore(getDb());
   return warnings;
 }
