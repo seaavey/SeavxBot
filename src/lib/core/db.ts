@@ -36,8 +36,13 @@ import {
   createWarningsStore,
   type WarningsStore,
 } from "@/lib/group/warnings";
+import {
+  USER_GROUPS_TABLE_SQL,
+  createUserGroupsStore,
+  type UserGroupsStore,
+} from "@/lib/group/userGroups";
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 /**
  * SQLite's own `user_version` doubles as the migration cursor, so there is no
@@ -57,6 +62,7 @@ function migrate(db: Database): void {
     if (version < 4) db.exec(UNDERCOVER_TABLE_SQL);
     if (version < 5) db.exec(WEREWOLF_TABLE_SQL);
     if (version < 6) db.exec(WARNINGS_TABLE_SQL);
+    if (version < 7) db.exec(USER_GROUPS_TABLE_SQL);
     // A literal: PRAGMA does not accept bound parameters.
     db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   })();
@@ -82,6 +88,7 @@ let stickerPack: StickerPackStore | undefined;
 let undercover: UndercoverStore | undefined;
 let werewolf: WerewolfStore | undefined;
 let warnings: WarningsStore | undefined;
+let userGroups: UserGroupsStore | undefined;
 
 /** Opened on first use so importing this module never touches the disk. */
 function getDb(): Database {
@@ -117,4 +124,9 @@ export function getWerewolf(): WerewolfStore {
 export function getWarnings(jid: string): WarningsStore {
   warnings ??= createWarningsStore(getDb());
   return warnings;
+}
+
+export function getUserGroups(): UserGroupsStore {
+  userGroups ??= createUserGroupsStore(getDb());
+  return userGroups;
 }
