@@ -7,13 +7,9 @@ import {
   getGroupMetadata,
   invalidateGroupMetadata,
 } from "@/lib/group/groupCache";
-import {
-  isBot,
-  labelFor,
-  participantJid,
-  userPart,
-} from "@/lib/message/identity";
+import { labelFor, participantJid, userPart } from "@/lib/message/identity";
 import type { SettingsStore } from "@/lib/group/settings";
+import { mentionables } from "@/lib/group/participants";
 
 export interface GreetingMember {
   jid: string;
@@ -76,20 +72,12 @@ export async function handleParticipantsUpdate(
     const settings = store.get(update.id);
     if (!settings[flag]) return;
 
-    const members = update.participants
-      .filter(
-        (participant) =>
-          !isBot(
-            sock,
-            participant.id,
-            participant.lid,
-            participant.phoneNumber,
-          ),
-      )
-      .map((participant) => ({
+    const members = mentionables(sock, update.participants).map(
+      (participant) => ({
         jid: participant.id,
         name: displayName(participant),
-      }));
+      }),
+    );
 
     if (members.length === 0) return;
 

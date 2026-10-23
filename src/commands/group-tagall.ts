@@ -1,5 +1,6 @@
 import type { Command } from "@/lib/core/types";
-import { isBot, userPart } from "@/lib/message/identity";
+import { mentionables } from "@/lib/group/participants";
+import { userPart } from "@/lib/message/identity";
 
 export const tagAllCommand: Command = {
   name: "tagall",
@@ -18,10 +19,7 @@ export const tagAllCommand: Command = {
     // account. `mentionedJid` keeps the group's addressing form (a LID in a
     // LID group), and the text token is built from that same JID so the tag
     // resolves — the same pairing `greeting.ts` uses.
-    const members = meta.participants.filter(
-      (participant) =>
-        !isBot(sock, participant.id, participant.lid, participant.phoneNumber),
-    );
+    const members = mentionables(sock, meta.participants);
 
     const mentions = members.map((participant) => participant.id);
     const list = members
