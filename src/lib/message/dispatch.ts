@@ -118,6 +118,7 @@ export async function handleMessage(
     if (notice) await reply(notice);
   } catch (err) {
     console.error("AFK check failed:", err);
+    logToFile("AFK_ERROR", { error: String(err) });
   }
 
   if (!cmd) return;

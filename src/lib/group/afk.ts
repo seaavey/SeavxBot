@@ -1,5 +1,6 @@
 import type { ParsedMessage } from "@/lib/message/parseMessage";
 import { pnFor } from "@/lib/group/ops";
+import { logToFile } from "@/lib/core/logger";
 import { sameUser, userPart } from "@/lib/message/identity";
 
 interface AfkEntry {
@@ -32,10 +33,35 @@ function remove(chatJid: string, entry: AfkEntry): void {
 }
 
 export function clearAfk(msg: ParsedMessage): void {
-  const entry =
-    find(msg.chatJid, pnFor(msg.groupMetadata, msg.senderJid)) ??
-    find(msg.chatJid, msg.senderLid);
-  if (entry) remove(msg.chatJid, entry);
+  const pn = pnFor(msg.groupMetadata, msg.senderJid);
+  const byPn = find(msg.chatJid, pn);
+  const byLid = find(msg.chatJid, msg.senderLid);
+  const entry = byPn ?? byLid;
+  if (!entry) {
+    // Only a chat that already holds a row is worth a line; plain chatter is
+    // not a diagnostic.
+    if (chats.has(msg.chatJid)) {
+      logToFile("AFK_CLEAR_MISS", {
+        chatJid: msg.chatJid,
+        senderJid: msg.senderJid,
+        senderLid: msg.senderLid,
+        pn,
+        stored: (chats.get(msg.chatJid) ?? []).map((row) => ({
+          jid: row.jid,
+          lid: row.lid,
+        })),
+      });
+    }
+    return;
+  }
+
+  logToFile("AFK_CLEAR", {
+    chatJid: msg.chatJid,
+    jid: entry.jid,
+    lid: entry.lid,
+    via: byPn ? "pn" : "lid",
+  });
+  remove(msg.chatJid, entry);
 }
 
 /** Stores the sender's status and returns the reason that was stored. */
@@ -56,6 +82,11 @@ function setAfk(msg: ParsedMessage, reason: string): string {
   );
   next.push(entry);
   chats.set(msg.chatJid, next);
+  logToFile("AFK_SET", {
+    chatJid: msg.chatJid,
+    jid: entry.jid,
+    lid: entry.lid,
+  });
   return stored;
 }
 
@@ -74,6 +105,7 @@ export function afkNotice(msg: ParsedMessage): AfkNotice | undefined {
 
   const candidates = [...msg.mentions];
   if (msg.quoted?.senderJid) candidates.push(msg.quoted.senderJid);
+  if (candidates.length === 0) return;
 
   const seen = new Set<AfkEntry>();
   const lines: string[] = [];
@@ -88,6 +120,18 @@ export function afkNotice(msg: ParsedMessage): AfkNotice | undefined {
     mentions.push(jid);
     lines.push(`💤 @${userPart(jid)} is AFK — ${entry.reason}`);
   }
+
+  logToFile("AFK_NOTICE", {
+    chatJid: msg.chatJid,
+    senderJid: msg.senderJid,
+    senderLid: msg.senderLid,
+    candidates,
+    stored: (chats.get(msg.chatJid) ?? []).map((row) => ({
+      jid: row.jid,
+      lid: row.lid,
+    })),
+    lines: lines.length,
+  });
 
   return lines.length > 0 ? { text: lines.join("\n"), mentions } : undefined;
 }
