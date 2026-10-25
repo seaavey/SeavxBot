@@ -30,13 +30,14 @@ CI (`.github/workflows/ci.yml`) pins Bun 1.4.3 and runs `bun install --frozen-lo
 - `src/index.ts` — auth prompt, socket, reconnect, Baileys event wiring.
 - `src/lib/message/dispatch.ts` — the inbound pipeline for one message.
 - `src/lib/core/config.ts` — the only reader of `config.toml` and `SEAVXBOT_DB_PATH`; exports resolved values, so other modules never touch a raw config object.
-- `src/commands/<category>-<name>.ts` — one command per file.
+- `src/commands/<category>/<name>.ts` — one command per file; the folder is
+  the menu category.
 - `src/lib/<domain>/` — one concept per file, grouped by domain: `core/` (config, db, logger, commandLoader, types), `message/` (dispatch, parseMessage, messageContent, permissions, identity, mentions), `media/` (mediaSource, imageSource, mediaMessages, ffmpeg, webp, extractUrl), `group/` (group, groupCache, greeting, userSync, antilink, settings), `user/` (users, profile), `games/<name>/` (one folder per game, `index.ts` is the engine: `undercover/` has `index.ts`, `word.ts`, `rules.ts`, `store.ts`).
 - `src/scrapers/*.ts` — one module per platform; shared `getText`/`getJson` from `scrapers/http.ts` return `null` on failure instead of throwing.
 
 ## Adding a command
 
-`src/commands/general-ping.ts` is the template:
+`src/commands/general/ping.ts` is the template:
 
     export const pingCommand: Command = {
       name: "ping",
@@ -53,7 +54,10 @@ CI (`.github/workflows/ci.yml`) pins Bun 1.4.3 and runs `bun install --frozen-lo
 
     export default pingCommand;
 
-- The filename is irrelevant: `loadCommands()` keys on `name` (lowercased) plus `aliases`, skips `.test.`/`.spec.` files, and silently drops a module without `name` and a `run` function.
+- The file base name is the command's `name` and the folder is its menu
+  category: `loadCommands()` keys on `name` (lowercased) plus `aliases`, skips
+  `.test.`/`.spec.` files, and `console.warn`s on a module without `name` and a
+  `run` function.
 - No `*.test.ts` inside `src/commands/`: command logic that needs a test lives in `src/lib/` with the test beside it.
 - Declare access with the flags and let `denyReason()` in `dispatch.ts` enforce them; do not re-check permissions inside `run`.
 - `reply()` quotes the trigger message and turns phone numbers in the text into @tags; pass an `AnyMessageContent` object for media. `react()` swallows failures by design.
