@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/headers.png" alt="SeavxBot" width="380">
+</p>
+
 # seavxbot
 
 [![CI](https://github.com/seaavey/SeavxBot/actions/workflows/ci.yml/badge.svg)](https://github.com/seaavey/SeavxBot/actions/workflows/ci.yml)
