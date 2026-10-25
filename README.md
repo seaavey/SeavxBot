@@ -35,4 +35,19 @@ bun run format        # prettier --write .
 bun run format:check  # prettier --check . (what CI enforces)
 ```
 
+## Running under PM2
+
+```bash
+bun add -g pm2          # pm2 is not a project dependency
+bun start               # pair once first: the QR/pairing prompt needs a TTY
+pm2 start ecosystem.config.cjs
+pm2 logs seavxbot
+```
+
+`ecosystem.config.cjs` pins the working directory to the repo, so `auth_info/`,
+`data/` and `config.toml` resolve however pm2 was launched, and it waits 3 s
+before a restart because a new instance that authenticates while the old socket
+is still registered gets a 440 close, which the bot does not retry. `bun` must be
+on `PATH` for the pm2 daemon, including after `pm2 startup` on boot.
+
 This project was created using `bun init` in bun v1.4.3. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
