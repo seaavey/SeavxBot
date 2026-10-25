@@ -5,12 +5,19 @@ import type { Command } from "@/lib/core/types";
 export const commands = new Map<string, Command>();
 export const aliases = new Map<string, string>();
 
-export async function loadCommands(
-  dir = path.resolve(import.meta.dir, "../../commands"),
-): Promise<void> {
+const COMMANDS_DIR = path.resolve(import.meta.dir, "../../commands");
+
+export async function loadCommands(dir = COMMANDS_DIR): Promise<void> {
   commands.clear();
   aliases.clear();
 
+  await walk(dir);
+
+  console.log(`Loaded ${commands.size} commands (${aliases.size} aliases)`);
+}
+
+/** The folder a file sits in is its menu category. */
+async function walk(dir: string, category?: string): Promise<void> {
   if (!fs.existsSync(dir)) return;
 
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -19,7 +26,8 @@ export async function loadCommands(
     const fullPath = path.join(dir, entry.name);
 
     if (entry.isDirectory()) {
-      await loadCommands(fullPath);
+      // Outermost folder wins, so a nested folder cannot invent a section.
+      await walk(fullPath, category ?? entry.name);
       continue;
     }
 
@@ -36,8 +44,8 @@ export async function loadCommands(
       continue;
     }
 
-    // The menu groups on this; the loader is the only place that sees the file.
-    cmd.category ??= path.parse(entry.name).name.split("-")[0];
+    if (category) cmd.category ??= category;
+    else console.warn(`No category folder for ${fullPath}`);
 
     commands.set(cmd.name.toLowerCase(), cmd);
 
@@ -47,8 +55,6 @@ export async function loadCommands(
       }
     }
   }
-
-  console.log(`Loaded ${commands.size} commands (${aliases.size} aliases)`);
 }
 
 export function getCommand(name: string): Command | undefined {
